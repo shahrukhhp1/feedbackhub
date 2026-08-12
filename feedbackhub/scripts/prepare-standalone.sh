@@ -17,5 +17,7 @@ cp -a "$STANDALONE/." "$DEPLOY/"
 cp -a "$ROOT/.next/static" "$DEPLOY/.next/static"
 cp -a "$ROOT/public" "$DEPLOY/public"
 cp -a "$ROOT/drizzle" "$DEPLOY/drizzle"
+cp "$ROOT/web.config" "$DEPLOY/web.config"
+mkdir -p "$DEPLOY/logs"
 
 echo "Deploy bundle ready at $DEPLOY"
