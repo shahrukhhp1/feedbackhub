@@ -1,0 +1,962 @@
+openapi: 3.1.0
+info:
+  title: Feedback Hub Mobile API
+  version: 1.0.0
+  description: |
+    Mobile client API for Feedback Hub. All authenticated endpoints require an installation
+    bearer token obtained via registration. Admin endpoints are not included here.
+
+    Every response includes an `x-request-id` header for correlation.
+
+servers:
+  - url: /api/v1
+    description: Mobile API base path
+
+tags:
+  - name: Installations
+    description: Registration and token issuance
+  - name: Sync
+    description: Questions and admin reply synchronization
+  - name: Answers
+    description: Question answer submission
+  - name: Questions
+    description: Question dismissal
+  - name: Conversations
+    description: Feedback threads and messages
+  - name: Messages
+    description: Delivery and read acknowledgments
+
+paths:
+  /installations/register:
+    post:
+      tags: [Installations]
+      summary: Register or re-register an installation
+      description: |
+        Exchanges `appId`, `clientKey`, and `userGuid` for an installation bearer token.
+        Re-registering the same `(appId, userGuid)` rotates the token and clears revocation.
+        The raw token is returned only in this response.
+      operationId: registerInstallation
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInstallationRequest"
+            examples:
+              full:
+                summary: Full registration with metadata
+                value:
+                  appId: "550e8400-e29b-41d4-a716-446655440000"
+                  clientKey: "fh_abc123xyz789"
+                  userGuid: "local-install-guid-001"
+                  platform: ios
+                  appVersion: "1.2.0"
+                  locale: en-US
+                  timezone: Asia/Bangkok
+              minimal:
+                summary: Required fields only
+                value:
+                  appId: "550e8400-e29b-41d4-a716-446655440000"
+                  clientKey: "fh_abc123xyz789"
+                  userGuid: "local-install-guid-001"
+      responses:
+        "200":
+          description: Installation registered
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterInstallationResponse"
+              example:
+                installationId: "660e8400-e29b-41d4-a716-446655440001"
+                token: "dGhpcy1pcy1hLWJhc2U2NHVybC10b2tlbg"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          description: Invalid client key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: Invalid client key
+                  requestId: "req-401-example"
+        "403":
+          description: App is not active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: FORBIDDEN
+                  message: App is not active
+                  requestId: "req-403-example"
+        "404":
+          description: App not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /sync:
+    get:
+      tags: [Sync]
+      summary: Synchronize questions and admin replies
+      description: |
+        Returns active questions for the app and admin/system messages with sequence greater
+        than `after`. Updates installation last-seen metadata. Reply batch size is 100;
+        check `hasMore` and call again with updated cursor.
+      operationId: sync
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: after
+          in: query
+          description: Message sequence cursor (non-negative integer). Use 0 for initial sync.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+      responses:
+        "200":
+          description: Sync payload
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncResponse"
+              example:
+                questions:
+                  - id: "550e8400-e29b-41d4-a716-446655440010"
+                    title: How satisfied are you with the app?
+                    description: null
+                    answerType: rating
+                    options: null
+                    required: false
+                replies:
+                  - id: "550e8400-e29b-41d4-a716-446655440020"
+                    sequence: 12346
+                    conversationId: "550e8400-e29b-41d4-a716-446655440030"
+                    senderType: admin
+                    body: Thanks for your feedback!
+                    createdAt: "2026-08-07T12:00:00Z"
+                nextCursor: "12346"
+                serverTime: "2026-08-07T12:05:00Z"
+                hasMore: false
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: App is not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /answers:
+    post:
+      tags: [Answers]
+      summary: Submit a question answer
+      description: |
+        Submit an answer for a remote (server) question or a hardcoded (app-defined) question.
+        Creates an answer, linked conversation, and system message in one transaction.
+        Idempotent via `clientRequestId`.
+      operationId: submitAnswer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/SubmitRemoteAnswerRequest"
+                - $ref: "#/components/schemas/SubmitHardcodedAnswerRequest"
+            examples:
+              remoteRating:
+                summary: Remote question — rating
+                value:
+                  questionId: "550e8400-e29b-41d4-a716-446655440010"
+                  answer: 4
+                  clientRequestId: "770e8400-e29b-41d4-a716-446655440003"
+              remoteSingleChoice:
+                summary: Remote question — single choice
+                value:
+                  questionId: "550e8400-e29b-41d4-a716-446655440011"
+                  answer: Option A
+                  clientRequestId: "770e8400-e29b-41d4-a716-446655440004"
+              hardcoded:
+                summary: Hardcoded app question
+                value:
+                  externalQuestionKey: settings-nps
+                  questionText: How likely are you to recommend us?
+                  answerType: rating
+                  answer: 5
+                  clientRequestId: "770e8400-e29b-41d4-a716-446655440005"
+      responses:
+        "200":
+          description: Answer recorded (or duplicate idempotent response)
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitAnswerResponse"
+              example:
+                answerId: "880e8400-e29b-41d4-a716-446655440006"
+                conversationId: "990e8400-e29b-41d4-a716-446655440007"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Question not currently available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                error:
+                  code: FORBIDDEN
+                  message: Question is not currently available
+                  requestId: "req-forbidden-example"
+        "404":
+          description: Question not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /questions/{questionId}/dismiss:
+    post:
+      tags: [Questions]
+      summary: Dismiss a remote question
+      description: |
+        Prevents the question from being returned in future sync responses for this installation.
+      operationId: dismissQuestion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: questionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DismissQuestionRequest"
+            example:
+              clientRequestId: "770e8400-e29b-41d4-a716-446655440008"
+      responses:
+        "200":
+          description: Question dismissed
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DismissQuestionResponse"
+              example:
+                dismissed: true
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Question not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /conversations:
+    get:
+      tags: [Conversations]
+      summary: List conversations for this installation
+      operationId: listConversations
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          description: Pagination cursor from previous response
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Paginated conversation list
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationListResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags: [Conversations]
+      summary: Submit general feedback
+      description: |
+        Creates a conversation with source type `general_feedback` and the first mobile-user message.
+        Idempotent via `clientRequestId`.
+      operationId: createFeedback
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConversationRequest"
+            example:
+              subject: Bug report
+              message: The checkout button does not respond on iOS 18.
+              clientRequestId: "770e8400-e29b-41d4-a716-446655440009"
+      responses:
+        "200":
+          description: Feedback submitted (or duplicate idempotent response)
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateConversationResponse"
+              example:
+                conversationId: "aa0e8400-e29b-41d4-a716-446655440010"
+                messageId: "bb0e8400-e29b-41d4-a716-446655440011"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /conversations/{conversationId}/messages:
+    get:
+      tags: [Conversations]
+      summary: List messages in a conversation
+      operationId: listConversationMessages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: before
+          in: query
+          description: Message sequence for backward pagination
+          schema:
+            type: integer
+            minimum: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Paginated message list
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageListResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags: [Conversations]
+      summary: Add a message to a conversation
+      description: |
+        Post a follow-up message from the mobile user. May reopen a closed conversation.
+        Idempotent via `clientRequestId`.
+      operationId: addMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddMessageRequest"
+            example:
+              body: Here are more details about the issue.
+              clientRequestId: "770e8400-e29b-41d4-a716-446655440012"
+      responses:
+        "200":
+          description: Message created (or duplicate idempotent response)
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddMessageResponse"
+              example:
+                messageId: "cc0e8400-e29b-41d4-a716-446655440013"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Conversation not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /messages/acknowledge:
+    post:
+      tags: [Messages]
+      summary: Acknowledge message delivery and read state
+      description: |
+        Report which admin/system messages have been delivered or read by the mobile client.
+        Only messages belonging to the authenticated installation's conversations are accepted.
+      operationId: acknowledgeMessages
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcknowledgeMessagesRequest"
+            example:
+              delivered:
+                - "550e8400-e29b-41d4-a716-446655440020"
+                - "550e8400-e29b-41d4-a716-446655440021"
+              read:
+                - "550e8400-e29b-41d4-a716-446655440020"
+      responses:
+        "200":
+          description: Acknowledgments recorded
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcknowledgeMessagesResponse"
+              example:
+                acknowledged: true
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Installation token from POST /installations/register
+
+  headers:
+    XRequestId:
+      description: Request correlation ID
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ErrorBody:
+      type: object
+      required: [code, message, requestId]
+      properties:
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        message:
+          type: string
+        requestId:
+          type: string
+        details:
+          description: Optional structured validation or conflict details
+          additionalProperties: true
+
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - UNAUTHORIZED
+        - FORBIDDEN
+        - NOT_FOUND
+        - CONFLICT
+        - RATE_LIMITED
+        - PAYLOAD_TOO_LARGE
+        - INTERNAL_ERROR
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorBody"
+
+    RegisterInstallationRequest:
+      type: object
+      required: [appId, clientKey, userGuid]
+      properties:
+        appId:
+          type: string
+          format: uuid
+        clientKey:
+          type: string
+          minLength: 1
+          maxLength: 200
+        userGuid:
+          type: string
+          minLength: 1
+          maxLength: 128
+        contactEmail:
+          type: string
+          format: email
+          maxLength: 255
+          description: Optional contact email for website visitors
+        platform:
+          type: string
+          enum: [ios, android, web, other]
+        appVersion:
+          type: string
+          maxLength: 40
+        locale:
+          type: string
+          maxLength: 20
+        timezone:
+          type: string
+          maxLength: 80
+
+    RegisterInstallationResponse:
+      type: object
+      required: [installationId, token]
+      properties:
+        installationId:
+          type: string
+          format: uuid
+        token:
+          type: string
+          description: Raw installation bearer token — store securely; shown only once
+
+    SyncQuestion:
+      type: object
+      required: [id, title, answerType, required]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        answerType:
+          $ref: "#/components/schemas/AnswerType"
+        options:
+          type: object
+          nullable: true
+          properties:
+            choices:
+              type: array
+              items:
+                type: string
+        required:
+          type: boolean
+
+    SyncReply:
+      type: object
+      required: [id, sequence, conversationId, senderType, body, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          format: int64
+        conversationId:
+          type: string
+          format: uuid
+        senderType:
+          type: string
+          enum: [mobile_user, admin, system]
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    SyncResponse:
+      type: object
+      required: [questions, replies, nextCursor, serverTime]
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncQuestion"
+        replies:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncReply"
+        nextCursor:
+          type: string
+          description: Message sequence cursor for next sync request
+        serverTime:
+          type: string
+          format: date-time
+        hasMore:
+          type: boolean
+          description: Present and true when more than 100 replies are pending
+
+    AnswerType:
+      type: string
+      enum:
+        - short_text
+        - long_text
+        - single_choice
+        - multiple_choice
+        - rating
+        - yes_no
+
+    SubmitRemoteAnswerRequest:
+      type: object
+      required: [questionId, answer, clientRequestId]
+      properties:
+        questionId:
+          type: string
+          format: uuid
+        answer:
+          description: Shape depends on question answerType
+          oneOf:
+            - type: string
+            - type: integer
+              minimum: 1
+              maximum: 5
+            - type: boolean
+            - type: array
+              items:
+                type: string
+        clientRequestId:
+          type: string
+          format: uuid
+
+    SubmitHardcodedAnswerRequest:
+      type: object
+      required: [externalQuestionKey, questionText, answerType, answer, clientRequestId]
+      properties:
+        externalQuestionKey:
+          type: string
+          maxLength: 120
+        questionText:
+          type: string
+          maxLength: 10000
+        answerType:
+          $ref: "#/components/schemas/AnswerType"
+        answer:
+          oneOf:
+            - type: string
+            - type: integer
+              minimum: 1
+              maximum: 5
+            - type: boolean
+            - type: array
+              items:
+                type: string
+        clientRequestId:
+          type: string
+          format: uuid
+
+    SubmitAnswerResponse:
+      type: object
+      required: [answerId, conversationId]
+      properties:
+        answerId:
+          type: string
+          format: uuid
+        conversationId:
+          type: string
+          format: uuid
+
+    DismissQuestionRequest:
+      type: object
+      required: [clientRequestId]
+      properties:
+        clientRequestId:
+          type: string
+          format: uuid
+
+    DismissQuestionResponse:
+      type: object
+      required: [dismissed]
+      properties:
+        dismissed:
+          type: boolean
+
+    CreateConversationRequest:
+      type: object
+      required: [subject, message, clientRequestId]
+      properties:
+        subject:
+          type: string
+          maxLength: 200
+        message:
+          type: string
+          maxLength: 10000
+        clientRequestId:
+          type: string
+          format: uuid
+
+    CreateConversationResponse:
+      type: object
+      required: [conversationId, messageId]
+      properties:
+        conversationId:
+          type: string
+          format: uuid
+        messageId:
+          type: string
+          format: uuid
+
+    ConversationSummary:
+      type: object
+      required: [id, subject, status, sourceType, lastMessageAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        subject:
+          type: string
+        status:
+          type: string
+          enum: [open, waiting_for_user, closed]
+        sourceType:
+          type: string
+          enum: [general_feedback, question_answer]
+        lastMessageAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    ConversationListResponse:
+      type: object
+      required: [items, nextCursor, hasMore]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConversationSummary"
+        nextCursor:
+          type: string
+          nullable: true
+        hasMore:
+          type: boolean
+
+    MessageSummary:
+      type: object
+      required: [id, sequence, senderType, body, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          format: int64
+        senderType:
+          type: string
+          enum: [mobile_user, admin, system]
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    MessageListResponse:
+      type: object
+      required: [items, nextCursor, hasMore]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MessageSummary"
+        nextCursor:
+          type: string
+          nullable: true
+        hasMore:
+          type: boolean
+
+    AddMessageRequest:
+      type: object
+      required: [body, clientRequestId]
+      properties:
+        body:
+          type: string
+          maxLength: 10000
+        clientRequestId:
+          type: string
+          format: uuid
+
+    AddMessageResponse:
+      type: object
+      required: [messageId]
+      properties:
+        messageId:
+          type: string
+          format: uuid
+
+    AcknowledgeMessagesRequest:
+      type: object
+      properties:
+        delivered:
+          type: array
+          items:
+            type: string
+            format: uuid
+          default: []
+        read:
+          type: array
+          items:
+            type: string
+            format: uuid
+          default: []
+
+    AcknowledgeMessagesResponse:
+      type: object
+      required: [acknowledged]
+      properties:
+        acknowledged:
+          type: boolean
+
+  responses:
+    ValidationError:
+      description: Invalid request body or query parameters
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Request body are invalid
+              requestId: "req-validation-example"
+              details:
+                fieldErrors: {}
+                formErrors: []
+
+    Unauthorized:
+      description: Missing or invalid installation bearer token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or revoked installation token
+              requestId: "req-unauthorized-example"
+
+    RateLimited:
+      description: Rate limit exceeded (120/min per IP, 60/min per installation)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: RATE_LIMITED
+              message: Too many requests
+              requestId: "req-rate-limit-example"
+
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            error:
+              code: INTERNAL_ERROR
+              message: An unexpected error occurred
+              requestId: "req-internal-example"
