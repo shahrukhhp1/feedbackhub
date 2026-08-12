@@ -20,4 +20,9 @@ cp -a "$ROOT/drizzle" "$DEPLOY/drizzle"
 cp "$ROOT/web.config" "$DEPLOY/web.config"
 mkdir -p "$DEPLOY/logs"
 
+if [[ ! -d "$DEPLOY/node_modules/@swc/helpers" ]]; then
+  echo "Standalone bundle is missing @swc/helpers. Check pnpm hoisting and outputFileTracingIncludes." >&2
+  exit 1
+fi
+
 echo "Deploy bundle ready at $DEPLOY"
