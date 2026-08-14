@@ -3,12 +3,8 @@ const MOBILE_API_PREFIX = "/api/v1/";
 const CORS_ALLOW_HEADERS = "Content-Type, Authorization, x-request-id";
 const CORS_ALLOW_METHODS = "GET, POST, OPTIONS";
 
-function parseAllowedOrigins(): string[] {
-  const raw = process.env.CORS_ALLOWED_ORIGINS ?? "";
-  return raw
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+function normalizeOrigin(origin: string): string {
+  return origin.trim().replace(/\/+$/, "");
 }
 
 export function isMobileApiPath(pathname: string): boolean {
@@ -17,8 +13,7 @@ export function isMobileApiPath(pathname: string): boolean {
 
 export function resolveCorsOrigin(requestOrigin: string | null): string | null {
   if (!requestOrigin) return null;
-  const allowed = parseAllowedOrigins();
-  return allowed.includes(requestOrigin) ? requestOrigin : null;
+  return normalizeOrigin(requestOrigin);
 }
 
 export function applyMobileApiCorsHeaders(
