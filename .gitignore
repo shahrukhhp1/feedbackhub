@@ -1,25 +1,25 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/feedbackhub/node_modules
-/feedbackhub/.pnp
-/feedbackhub/.pnp.*
-/feedbackhub/.yarn/*
-/feedbackhub/.pnpm-store/*
+/node_modules
+/.pnp
+/.pnp.*
+/.yarn/*
+/.pnpm-store/*
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
 
 # testing
-/feedbackhub/coverage
+/coverage
 
 # next.js
-/feedbackhub/.next/
-/feedbackhub/out/
+/.next/
+/out/
 
 # production
-/feedbackhub/build
+/build
 
 # misc
 .DS_Store
@@ -32,7 +32,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-/feedbackhub/.env*
+/.env*
 
 # vercel
 .vercel
