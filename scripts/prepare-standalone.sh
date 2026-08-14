@@ -28,7 +28,8 @@ mkdir -p "$DEPLOY/logs"
 
 # Standalone tracing misses several Next runtime packages with pnpm on Windows.
 # Replace the traced node_modules with a full production install.
-pnpm deploy "$TEMP_DEPS" --prod
+cd "$ROOT"
+pnpm --filter feedbackhub deploy "$TEMP_DEPS" --prod --legacy
 rm -rf "$DEPLOY/node_modules"
 cp -aL "$TEMP_DEPS/node_modules" "$DEPLOY/node_modules"
 

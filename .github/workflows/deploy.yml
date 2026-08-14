@@ -8,8 +8,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Repo layout: app lives in feedbackhub/ (override with repository variable APP_ROOT).
-  APP_ROOT: ${{ vars.APP_ROOT || 'feedbackhub' }}
   # FTP upload target (override with repository variable FTP_SERVER_DIR).
   FTP_SERVER_DIR: ${{ vars.FTP_SERVER_DIR || './' }}
 
@@ -25,21 +23,19 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 11.14.0
-          package_json_file: ${{ env.APP_ROOT }}/package.json
+          package_json_file: package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: ${{ env.APP_ROOT }}/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        working-directory: ${{ env.APP_ROOT }}
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        working-directory: ${{ env.APP_ROOT }}
         env:
           NODE_ENV: production
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -48,7 +44,6 @@ jobs:
         run: pnpm build
 
       - name: Prepare standalone bundle
-        working-directory: ${{ env.APP_ROOT }}
         run: bash scripts/prepare-standalone.sh
 
       - name: Upload via FTP
@@ -57,7 +52,7 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ${{ env.APP_ROOT }}/deploy/
+          local-dir: deploy/
           server-dir: ${{ env.FTP_SERVER_DIR }}
           exclude: |
             **/.git*
