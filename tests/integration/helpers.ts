@@ -74,7 +74,6 @@ export async function resetTestData(): Promise<void> {
   await db.execute(sql`
     TRUNCATE TABLE
       audit_logs,
-      question_dismissals,
       messages,
       conversations,
       answers,

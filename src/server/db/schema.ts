@@ -5,7 +5,6 @@ import {
   index,
   jsonb,
   pgTable,
-  primaryKey,
   text,
   timestamp,
   unique,
@@ -228,20 +227,6 @@ export const messages = pgTable(
       .on(table.conversationId, table.clientRequestId)
       .where(sql`${table.clientRequestId} IS NOT NULL`),
   ],
-);
-
-export const questionDismissals = pgTable(
-  "question_dismissals",
-  {
-    questionId: uuid("question_id")
-      .notNull()
-      .references(() => questions.id),
-    installationId: uuid("installation_id")
-      .notNull()
-      .references(() => installations.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [primaryKey({ columns: [table.questionId, table.installationId] })],
 );
 
 export const auditLogs = pgTable(

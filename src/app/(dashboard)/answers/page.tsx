@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Download } from "lucide-react";
+import { AnswerDetailDialog } from "@/components/answers/answer-detail-dialog";
 import { adminApi } from "@/lib/admin-api";
 import type { Answer, App } from "@/lib/admin-types";
+import { formatAnswerValue, truncateWords } from "@/lib/answer-display";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +30,7 @@ export default function AnswersPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState<string | null>(null);
+  const [selectedAnswer, setSelectedAnswer] = useState<Answer | null>(null);
 
   const appNames = useMemo(
     () => Object.fromEntries(apps.map((app) => [app.id, app.name])),
@@ -154,7 +157,11 @@ export default function AnswersPage() {
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow
+                    key={item.id}
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => setSelectedAnswer(item)}
+                  >
                     <TableCell className="max-w-[10rem]">
                       <p
                         className="truncate font-mono text-xs text-gray-900"
@@ -166,13 +173,15 @@ export default function AnswersPage() {
                     <TableCell className="max-w-[12rem] truncate text-sm text-gray-700">
                       {item.contactEmail ?? "—"}
                     </TableCell>
-                    <TableCell className="max-w-xs">
-                      <p className="truncate font-medium">{item.questionTextSnapshot}</p>
+                    <TableCell className="max-w-[12rem]">
+                      <p className="truncate text-sm font-medium" title={item.questionTextSnapshot}>
+                        {truncateWords(item.questionTextSnapshot)}
+                      </p>
                     </TableCell>
                     <TableCell>{appNames[item.appId] ?? item.appId.slice(0, 8)}</TableCell>
                     <TableCell>{item.answerType.replace(/_/g, " ")}</TableCell>
-                    <TableCell className="max-w-xs truncate font-mono text-xs">
-                      {JSON.stringify(item.answer)}
+                    <TableCell className="max-w-xs truncate text-sm text-gray-900">
+                      {formatAnswerValue(item.answer)}
                     </TableCell>
                     <TableCell className="text-gray-500">{formatDate(item.createdAt)}</TableCell>
                   </TableRow>
@@ -189,6 +198,15 @@ export default function AnswersPage() {
           ) : null}
         </>
       )}
+
+      <AnswerDetailDialog
+        answer={selectedAnswer}
+        appName={selectedAnswer ? appNames[selectedAnswer.appId] : undefined}
+        open={selectedAnswer !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedAnswer(null);
+        }}
+      />
     </div>
   );
 }

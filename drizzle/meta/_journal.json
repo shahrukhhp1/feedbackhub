@@ -29,6 +29,13 @@
       "when": 1786715632341,
       "tag": "0003_installation_contact_email",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786915632343,
+      "tag": "0004_drop_question_dismissals",
+      "breakpoints": true
     }
   ]
 }

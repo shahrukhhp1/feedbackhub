@@ -1,6 +1,6 @@
 import { and, desc, eq, gt, gte, ilike, inArray, isNull, lt, lte, notInArray, or, sql } from "drizzle-orm";
 import { getDb } from "@/server/db";
-import { answers, questionDismissals, questions } from "@/server/db/schema";
+import { answers, questions } from "@/server/db/schema";
 
 export type Question = typeof questions.$inferSelect;
 export type NewQuestion = typeof questions.$inferInsert;
@@ -170,11 +170,6 @@ export async function getActiveQuestionsForSync(
 ): Promise<Question[]> {
   const db = getDb();
 
-  const dismissedIds = db
-    .select({ questionId: questionDismissals.questionId })
-    .from(questionDismissals)
-    .where(eq(questionDismissals.installationId, installationId));
-
   const answeredIds = db
     .select({ questionId: answers.questionId })
     .from(answers)
@@ -194,7 +189,6 @@ export async function getActiveQuestionsForSync(
         eq(questions.status, "active"),
         or(isNull(questions.startsAt), lte(questions.startsAt, now)),
         or(isNull(questions.endsAt), gt(questions.endsAt, now)),
-        notInArray(questions.id, dismissedIds),
         or(
           eq(questions.allowMultipleAnswers, true),
           notInArray(questions.id, answeredIds),

@@ -57,10 +57,6 @@ export const submitAnswerSchema = z.preprocess((input) => {
   return input;
 }, submitAnswerDiscriminatedSchema);
 
-export const dismissQuestionSchema = z.object({
-  clientRequestId: clientRequestIdSchema,
-});
-
 export const createConversationSchema = z.object({
   subject: z.string().trim().min(1).max(MAX_SUBJECT_LENGTH),
   message: z.string().trim().min(1).max(MAX_MESSAGE_BODY_LENGTH),
@@ -101,7 +97,6 @@ export const listConversationMessagesQuerySchema = z.object({
 
 export type RegisterInstallationInput = z.infer<typeof registerInstallationSchema>;
 export type SubmitAnswerInput = z.infer<typeof submitAnswerSchema>;
-export type DismissQuestionInput = z.infer<typeof dismissQuestionSchema>;
 export type CreateConversationInput = z.infer<typeof createConversationSchema>;
 export type AddMessageInput = z.infer<typeof addMessageSchema>;
 export type AcknowledgeMessagesInput = z.infer<typeof acknowledgeMessagesSchema>;

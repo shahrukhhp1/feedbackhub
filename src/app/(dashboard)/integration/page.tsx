@@ -272,7 +272,7 @@ export default function IntegrationPage() {
       <p className="text-xs text-gray-500">
         See <code className="text-xs">docs/openapi.yaml</code> and{" "}
         <code className="text-xs">docs/mobile-integration-guide.md</code> in the repository for
-        acknowledge, dismiss, and retry behaviour.
+        acknowledge, and retry behaviour.
       </p>
     </div>
   );

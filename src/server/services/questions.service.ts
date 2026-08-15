@@ -192,17 +192,3 @@ function validateQuestionOptions(
     throw ApiError.validation("Choice questions require at least two options");
   }
 }
-
-export async function dismissQuestionForInstallation(
-  questionId: string,
-  installationId: string,
-  appId: string,
-): Promise<void> {
-  const question = await getQuestion(questionId);
-  if (!question || question.appId !== appId) {
-    throw ApiError.notFound("Question not found");
-  }
-
-  const { dismissQuestion } = await import("@/server/repositories/question-dismissals");
-  await dismissQuestion(questionId, installationId);
-}
