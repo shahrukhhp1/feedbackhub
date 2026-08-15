@@ -23,7 +23,7 @@ export function applyMobileApiCorsHeaders(
   const allowedOrigin = resolveCorsOrigin(requestOrigin);
   if (allowedOrigin) {
     response.headers.set("Access-Control-Allow-Origin", allowedOrigin);
-    response.headers.append("Vary", "Origin");
+    response.headers.set("Vary", "Origin");
   }
   response.headers.set("Access-Control-Allow-Methods", CORS_ALLOW_METHODS);
   response.headers.set("Access-Control-Allow-Headers", CORS_ALLOW_HEADERS);

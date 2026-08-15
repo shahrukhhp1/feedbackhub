@@ -2,6 +2,7 @@ import "server-only";
 
 import type { NextRequest } from "next/server";
 import { ApiError } from "@/server/api/errors";
+import { applyMobileApiCorsHeaders } from "@/server/api/cors";
 import { getClientIp, getRequestId } from "@/server/api/request";
 import { jsonError, jsonOk } from "@/server/api/response";
 import { authenticateInstallation } from "@/server/auth/installation";
@@ -53,6 +54,10 @@ function logRequest(
   });
 }
 
+function withMobileCors(request: NextRequest, response: Response): Response {
+  return applyMobileApiCorsHeaders(response, request.headers.get("origin"));
+}
+
 export async function handlePublicRoute<T>(
   request: NextRequest,
   endpoint: string,
@@ -65,17 +70,17 @@ export async function handlePublicRoute<T>(
   const rateLimit = checkIpRateLimit(ip, endpoint);
   if (!rateLimit.allowed) {
     logRequest(request, requestId, 429, "RATE_LIMITED", start);
-    return jsonError(ApiError.rateLimited(), requestId);
+    return withMobileCors(request, jsonError(ApiError.rateLimited(), requestId));
   }
 
   try {
     const data = await handler({ request, requestId, ip });
     logRequest(request, requestId, 200, undefined, start);
-    return jsonOk(data, requestId);
+    return withMobileCors(request, jsonOk(data, requestId));
   } catch (error) {
     const apiError = toApiError(error);
     logRequest(request, requestId, apiError.status, apiError.code, start);
-    return jsonError(apiError, requestId);
+    return withMobileCors(request, jsonError(apiError, requestId));
   }
 }
 
@@ -110,7 +115,7 @@ export async function handleMobileRoute<T>(
   const ipRateLimit = checkIpRateLimit(ip, endpoint);
   if (!ipRateLimit.allowed) {
     logRequest(request, requestId, 429, "RATE_LIMITED", start);
-    return jsonError(ApiError.rateLimited(), requestId);
+    return withMobileCors(request, jsonError(ApiError.rateLimited(), requestId));
   }
 
   try {
@@ -119,15 +124,15 @@ export async function handleMobileRoute<T>(
     const installationRateLimit = checkInstallationRateLimit(auth.installation.id, endpoint);
     if (!installationRateLimit.allowed) {
       logRequest(request, requestId, 429, "RATE_LIMITED", start);
-      return jsonError(ApiError.rateLimited(), requestId);
+      return withMobileCors(request, jsonError(ApiError.rateLimited(), requestId));
     }
 
     const data = await handler({ request, requestId, ip, ...auth });
     logRequest(request, requestId, 200, undefined, start);
-    return jsonOk(data, requestId);
+    return withMobileCors(request, jsonOk(data, requestId));
   } catch (error) {
     const apiError = toApiError(error);
     logRequest(request, requestId, apiError.status, apiError.code, start);
-    return jsonError(apiError, requestId);
+    return withMobileCors(request, jsonError(apiError, requestId));
   }
 }
