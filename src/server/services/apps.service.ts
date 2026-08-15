@@ -2,6 +2,13 @@ import "server-only";
 
 import { ApiError } from "@/server/api/errors";
 import {
+  assertCanManageApp,
+  assertCanViewApp,
+  getAccessibleAppIds,
+  resolveAppIdFilter,
+} from "@/server/auth/app-access";
+import { createAppMember } from "@/server/repositories/app-members";
+import {
   createApp,
   getAppById,
   getAppBySlug,
@@ -15,12 +22,15 @@ import {
   revokeInstallation,
 } from "@/server/repositories/installations";
 import { generateClientKey } from "@/server/security/crypto";
+import type { Role } from "@/shared/constants";
 import type { CreateAppInput, UpdateAppInput } from "@/server/validation/admin";
+import { getAppAccessMeta } from "./app-members.service";
 import { logAction } from "./audit.service";
 
 export async function createAppWithKey(
   input: CreateAppInput,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
   const existing = await getAppBySlug(input.slug);
@@ -37,6 +47,13 @@ export async function createAppWithKey(
     createdBy: actorUserId,
   });
 
+  await createAppMember({
+    appId: app.id,
+    userId: actorUserId,
+    appRole: "admin",
+    createdBy: actorUserId,
+  });
+
   await logAction({
     actorUserId,
     action: "app.created",
@@ -49,12 +66,20 @@ export async function createAppWithKey(
   return { app, clientKey };
 }
 
-export async function listApps(filters: {
-  status?: string;
-  cursor?: string;
-  limit?: number;
-}) {
-  const page = await listAppsPaginated(filters);
+export async function listApps(
+  actorUserId: string,
+  actorRole: Role | string,
+  filters: {
+    status?: string;
+    cursor?: string;
+    limit?: number;
+  },
+) {
+  const accessible = await getAccessibleAppIds(actorUserId, actorRole);
+  const page = await listAppsPaginated({
+    ...filters,
+    appIds: accessible === null ? undefined : accessible,
+  });
   return {
     items: page.items,
     nextCursor: page.nextCursor,
@@ -62,20 +87,28 @@ export async function listApps(filters: {
   };
 }
 
-export async function getApp(appId: string) {
+export async function getApp(
+  appId: string,
+  actorUserId: string,
+  actorRole: Role | string,
+) {
+  await assertCanViewApp(actorUserId, actorRole, appId);
   const app = await getAppById(appId);
   if (!app) {
     throw ApiError.notFound("App not found");
   }
-  return app;
+  const access = await getAppAccessMeta(appId, actorUserId, actorRole);
+  return { ...app, access };
 }
 
 export async function updateAppDetails(
   appId: string,
   input: UpdateAppInput,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
+  await assertCanManageApp(actorUserId, actorRole, appId);
   const existing = await getAppById(appId);
   if (!existing) {
     throw ApiError.notFound("App not found");
@@ -101,8 +134,10 @@ export async function updateAppDetails(
 export async function rotateAppClientKey(
   appId: string,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
+  await assertCanManageApp(actorUserId, actorRole, appId);
   const existing = await getAppById(appId);
   if (!existing) {
     throw ApiError.notFound("App not found");
@@ -127,8 +162,11 @@ export async function rotateAppClientKey(
 
 export async function listAppInstallations(
   appId: string,
+  actorUserId: string,
+  actorRole: Role | string,
   options: { includeRevoked?: boolean } = {},
 ) {
+  await assertCanViewApp(actorUserId, actorRole, appId);
   const app = await getAppById(appId);
   if (!app) {
     throw ApiError.notFound("App not found");
@@ -145,12 +183,15 @@ export async function listAppInstallations(
 export async function revokeAppInstallation(
   installationId: string,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
   const installation = await getInstallationById(installationId);
   if (!installation) {
     throw ApiError.notFound("Installation not found");
   }
+
+  await assertCanManageApp(actorUserId, actorRole, installation.appId);
 
   if (installation.revokedAt) {
     throw ApiError.conflict("Installation is already revoked");
@@ -171,4 +212,13 @@ export async function revokeAppInstallation(
   });
 
   return revoked;
+}
+
+export async function resolveAccessibleAppIdsForActor(
+  actorUserId: string,
+  actorRole: Role | string,
+  requestedAppId?: string,
+): Promise<string[] | undefined> {
+  const ids = await resolveAppIdFilter(actorUserId, actorRole, requestedAppId);
+  return ids;
 }

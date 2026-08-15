@@ -10,9 +10,15 @@ export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
 
   try {
-    await requireSession();
+    const session = await requireSession();
     const query = parseQuery(request, exportAnswersQuerySchema);
-    const { filename, content } = await exportAnswersCsv(query.appId, query.from, query.to);
+    const { filename, content } = await exportAnswersCsv(
+      query.appId,
+      query.from,
+      query.to,
+      session.user.id,
+      session.user.role,
+    );
 
     return new Response(content, {
       status: 200,

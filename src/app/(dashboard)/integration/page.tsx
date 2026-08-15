@@ -16,6 +16,8 @@ import { CopyableText } from "@/components/shared/copyable-text";
 import { EmptyState, ErrorState, LoadingState } from "@/components/shared/page-states";
 
 const EXAMPLE_USER_GUID = "your-local-installation-guid";
+const EXAMPLE_WEB_USER_GUID = "stable-browser-session-or-user-id";
+const EXAMPLE_CONTACT_EMAIL = "visitor@example.com";
 const EXAMPLE_TOKEN = "INSTALLATION_TOKEN_FROM_STEP_1";
 const EXAMPLE_QUESTION_ID = "QUESTION_ID_FROM_SYNC";
 const EXAMPLE_REQUEST_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -26,6 +28,7 @@ export default function IntegrationPage() {
   const [baseUrl, setBaseUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [integrationKind, setIntegrationKind] = useState<"mobile" | "web">("mobile");
 
   const selectedApp = apps.find((app) => app.id === appId);
 
@@ -52,16 +55,27 @@ export default function IntegrationPage() {
   }
 
   const registerBody = useMemo(
-    () => ({
-      appId: appId || "YOUR_APP_ID",
-      clientKey: selectedApp?.clientKey ?? "YOUR_CLIENT_KEY",
-      userGuid: EXAMPLE_USER_GUID,
-      platform: "ios",
-      appVersion: "1.0.0",
-      locale: "en-US",
-      timezone: "UTC",
-    }),
-    [appId, selectedApp?.clientKey],
+    () =>
+      integrationKind === "web"
+        ? {
+            appId: appId || "YOUR_APP_ID",
+            clientKey: selectedApp?.clientKey ?? "YOUR_CLIENT_KEY",
+            userGuid: EXAMPLE_WEB_USER_GUID,
+            platform: "web",
+            contactEmail: EXAMPLE_CONTACT_EMAIL,
+            locale: "en-US",
+            timezone: "UTC",
+          }
+        : {
+            appId: appId || "YOUR_APP_ID",
+            clientKey: selectedApp?.clientKey ?? "YOUR_CLIENT_KEY",
+            userGuid: EXAMPLE_USER_GUID,
+            platform: "ios",
+            appVersion: "1.0.0",
+            locale: "en-US",
+            timezone: "UTC",
+          },
+    [appId, integrationKind, selectedApp?.clientKey],
   );
 
   const registerCurl = `curl -X POST ${baseUrl}/api/v1/installations/register \\
@@ -156,25 +170,48 @@ export default function IntegrationPage() {
     <div className="mx-auto max-w-3xl space-y-8">
       <div className="space-y-1">
         <p className="text-sm text-gray-600">
-          Step-by-step guide for integrating a mobile app with the Feedback Hub API. All mobile
-          endpoints live under <code className="text-xs">/api/v1</code>.
+          Step-by-step guide for integrating a mobile app or website with the Feedback Hub API. All
+          client endpoints live under <code className="text-xs">/api/v1</code>. Browser embeds use
+          the same routes; call register from your site origin so CORS applies.
         </p>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <label className="mb-2 block text-sm font-medium text-gray-900">Select app</label>
-        <Select value={appId} onValueChange={setAppId}>
-          <SelectTrigger className="w-full max-w-md">
-            <SelectValue placeholder="Choose an app" />
-          </SelectTrigger>
-          <SelectContent>
-            {apps.map((app) => (
-              <SelectItem key={app.id} value={app.id}>
-                {app.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-4">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-900">Select app</label>
+          <Select value={appId} onValueChange={setAppId}>
+            <SelectTrigger className="w-full max-w-md">
+              <SelectValue placeholder="Choose an app" />
+            </SelectTrigger>
+            <SelectContent>
+              {apps.map((app) => (
+                <SelectItem key={app.id} value={app.id}>
+                  {app.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-900">Integration type</label>
+          <Select
+            value={integrationKind}
+            onValueChange={(value) => setIntegrationKind(value as "mobile" | "web")}
+          >
+            <SelectTrigger className="w-full max-w-md">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mobile">Mobile app (iOS / Android)</SelectItem>
+              <SelectItem value="web">Website (browser / embed)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="mt-2 text-xs text-gray-500">
+            {integrationKind === "web"
+              ? "Use platform web and optional contactEmail so admins can see who submitted feedback."
+              : "Use platform ios or android. Store the installation token in secure device storage."}
+          </p>
+        </div>
         {selectedApp ? (
           <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
             <div>
@@ -194,9 +231,9 @@ export default function IntegrationPage() {
       <section className="space-y-3">
         <h2 className="text-base font-semibold text-gray-900">1. Register installation (get token)</h2>
         <p className="text-sm text-gray-600">
-          Call this on first launch with your <strong>app ID</strong>, <strong>client key</strong>,
-          and a stable <strong>userGuid</strong> generated and stored by the mobile app. The
-          response returns an installation token — store it securely (Keychain / Keystore).
+          {integrationKind === "web"
+            ? "Call when a visitor opens your feedback widget or form. Use a stable userGuid (session or logged-in user id). Include contactEmail when you collect the visitor's email — it appears in Answers and Inbox."
+            : "Call on first launch with your app ID, client key, and a stable userGuid generated and stored by the app. Store the returned installation token securely (Keychain / Keystore)."}
         </p>
         <ApiRequestBlock
           method="POST"
@@ -209,6 +246,9 @@ export default function IntegrationPage() {
         <p className="text-xs text-gray-500">
           Save <code className="text-xs">token</code> immediately — it is only returned once per
           registration.
+          {integrationKind === "web"
+            ? " For websites, store it in sessionStorage or memory for the visit; re-register when it expires."
+            : null}
         </p>
       </section>
 

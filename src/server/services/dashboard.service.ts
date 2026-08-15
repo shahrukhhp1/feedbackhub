@@ -1,8 +1,10 @@
 import "server-only";
 
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
+import { getAccessibleAppIds } from "@/server/auth/app-access";
 import { getDb } from "@/server/db";
 import { answers, auditLogs, conversations } from "@/server/db/schema";
+import type { Role } from "@/shared/constants";
 
 export type DashboardOverview = {
   openConversations: number;
@@ -19,7 +21,24 @@ export type DashboardOverview = {
   }>;
 };
 
-export async function getDashboardOverview(): Promise<DashboardOverview> {
+export async function getDashboardOverview(
+  actorUserId: string,
+  actorRole: Role | string,
+): Promise<DashboardOverview> {
+  const accessible = await getAccessibleAppIds(actorUserId, actorRole);
+  if (accessible !== null && accessible.length === 0) {
+    return {
+      openConversations: 0,
+      waitingForUserConversations: 0,
+      answersLast7Days: 0,
+      answersLast30Days: 0,
+      recentActivity: [],
+    };
+  }
+  if (accessible !== null) {
+    return getDashboardOverviewForApps(accessible);
+  }
+
   const db = getDb();
   const now = new Date();
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);

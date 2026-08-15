@@ -20,10 +20,8 @@ erDiagram
 
     installations ||--o{ answers : submits
     installations ||--o{ conversations : owns
-    installations ||--o{ question_dismissals : dismisses
 
     questions ||--o{ answers : receives
-    questions ||--o{ question_dismissals : dismissed_by
 
     answers ||--o| conversations : may_link
 
@@ -147,12 +145,6 @@ erDiagram
         uuid client_request_id
         timestamptz delivered_at
         timestamptz read_at
-        timestamptz created_at
-    }
-
-    question_dismissals {
-        uuid question_id PK_FK
-        uuid installation_id PK_FK
         timestamptz created_at
     }
 
@@ -314,16 +306,6 @@ Messages within a conversation. Admin replies sync to mobile via `sequence`.
 
 **Unique constraint:** `(conversation_id, client_request_id)` where `client_request_id IS NOT NULL`
 
-### `question_dismissals`
-
-Tracks questions dismissed by an installation (not shown again in sync).
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `question_id` | uuid | PK, FK → `questions.id` |
-| `installation_id` | uuid | PK, FK → `installations.id` |
-| `created_at` | timestamptz | Dismissal time |
-
 ### `audit_logs`
 
 Append-only security and business action log.
@@ -343,9 +325,8 @@ Append-only security and business action log.
 
 1. **App → Installations → Conversations → Messages** — primary mobile feedback path.
 2. **App → Questions → Answers** — remote survey flow; each answer creates a linked conversation.
-3. **Installation + Question → Question dismissals** — prevents re-showing dismissed questions.
-4. **User → Apps, Questions** — tracks which admin created resources.
-5. **User → Audit logs** — tracks who performed administrative actions.
+3. **User → Apps, Questions** — tracks which admin created resources.
+4. **User → Audit logs** — tracks who performed administrative actions.
 
 ## Indexes
 

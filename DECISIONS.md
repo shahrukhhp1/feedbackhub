@@ -54,7 +54,6 @@ This document records implementation choices made where the development plan lef
 | **Cursor pagination, not offset** | Conversations, messages, answers, and audit logs use cursor-based pagination for stable performance at scale. |
 | **Message `sequence` for sync** | PostgreSQL `GENERATED ALWAYS AS IDENTITY` on `messages.sequence` enables efficient `sequence > after` sync queries. |
 | **Idempotency via `clientRequestId`** | Unique constraints on `(installationId, clientRequestId)` for answers and messages. Duplicate requests return the existing resource with 200. |
-| **Dismiss includes `clientRequestId` in schema** | Required in request body for consistency with other mutations; dismissal itself is keyed by `(questionId, installationId)` and is naturally idempotent. |
 | **Sync metadata update is non-blocking** | `lastSeenAt` update failures do not fail sync; client always receives questions and replies. |
 | **Bounded sync reply batch** | 100 messages per sync request (`SYNC_REPLY_LIMIT`); `hasMore` flag when additional messages exist. |
 

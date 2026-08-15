@@ -1,6 +1,7 @@
 import "server-only";
 
 import { ApiError } from "@/server/api/errors";
+import { assertCanManageApp, assertCanViewApp } from "@/server/auth/app-access";
 import { getAppById } from "@/server/repositories/apps";
 import {
   countAnswersForQuestion,
@@ -10,8 +11,9 @@ import {
   listQuestionsPaginated,
   updateQuestionMetadata,
 } from "@/server/repositories/questions";
-import type { QuestionStatus } from "@/shared/constants";
+import type { QuestionStatus, Role } from "@/shared/constants";
 import type { CreateQuestionInput, UpdateQuestionInput } from "@/server/validation/admin";
+import { resolveAccessibleAppIdsForActor } from "./apps.service";
 import { logAction } from "./audit.service";
 
 const MEANING_FIELDS = ["options", "required", "allowMultipleAnswers"] as const;
@@ -19,8 +21,10 @@ const MEANING_FIELDS = ["options", "required", "allowMultipleAnswers"] as const;
 export async function createQuestionForApp(
   input: CreateQuestionInput,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
+  await assertCanManageApp(actorUserId, actorRole, input.appId);
   const app = await getAppById(input.appId);
   if (!app) {
     throw ApiError.notFound("App not found");
@@ -54,13 +58,22 @@ export async function createQuestionForApp(
   return question;
 }
 
-export async function listQuestions(filters: {
-  appId?: string;
-  status?: string;
-  cursor?: string;
-  limit?: number;
-}) {
-  const page = await listQuestionsPaginated(filters);
+export async function listQuestions(
+  actorUserId: string,
+  actorRole: Role | string,
+  filters: {
+    appId?: string;
+    status?: string;
+    cursor?: string;
+    limit?: number;
+  },
+) {
+  const appIds = await resolveAccessibleAppIdsForActor(actorUserId, actorRole, filters.appId);
+  const page = await listQuestionsPaginated({
+    ...filters,
+    appId: undefined,
+    appIds: appIds,
+  });
   return {
     items: page.items,
     nextCursor: page.nextCursor,
@@ -68,11 +81,16 @@ export async function listQuestions(filters: {
   };
 }
 
-export async function getQuestionById(questionId: string) {
+export async function getQuestionById(
+  questionId: string,
+  actorUserId: string,
+  actorRole: Role | string,
+) {
   const question = await getQuestion(questionId);
   if (!question) {
     throw ApiError.notFound("Question not found");
   }
+  await assertCanViewApp(actorUserId, actorRole, question.appId);
   return question;
 }
 
@@ -80,12 +98,14 @@ export async function updateQuestionDetails(
   questionId: string,
   input: UpdateQuestionInput,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
   const existing = await getQuestion(questionId);
   if (!existing) {
     throw ApiError.notFound("Question not found");
   }
+  await assertCanManageApp(actorUserId, actorRole, existing.appId);
 
   const answerCount = await countAnswersForQuestion(questionId);
   if (answerCount > 0) {
@@ -135,12 +155,14 @@ export async function setQuestionStatus(
   status: QuestionStatus,
   action: string,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
   const existing = await getQuestion(questionId);
   if (!existing) {
     throw ApiError.notFound("Question not found");
   }
+  await assertCanManageApp(actorUserId, actorRole, existing.appId);
 
   const question = await updateQuestionMetadata(questionId, { status });
   if (!question) {
@@ -162,12 +184,14 @@ export async function setQuestionStatus(
 export async function duplicateQuestionById(
   questionId: string,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
   const source = await getQuestion(questionId);
   if (!source) {
     throw ApiError.notFound("Question not found");
   }
+  await assertCanManageApp(actorUserId, actorRole, source.appId);
 
   const question = await duplicateQuestion(questionId, actorUserId);
 

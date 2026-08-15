@@ -79,6 +79,7 @@ export async function resetTestData(): Promise<void> {
       answers,
       questions,
       installations,
+      app_members,
       apps,
       verification,
       session,
@@ -152,6 +153,7 @@ export async function createTestApp(actorUserId: string, slug = `test-${randomUU
       status: "active",
     },
     actorUserId,
+    "superadmin",
   );
 
   return { app, clientKey };

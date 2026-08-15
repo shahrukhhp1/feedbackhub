@@ -5,6 +5,7 @@ import {
   index,
   jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -71,18 +72,40 @@ export const verification = pgTable("verification", {
 
 // ─── Application tables ───────────────────────────────────────────────────────
 
-export const apps = pgTable("apps", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 120 }).notNull(),
-  slug: varchar("slug", { length: 80 }).notNull().unique(),
-  clientKey: varchar("client_key", { length: 120 }).notNull(),
-  status: varchar("status", { length: 20 }).notNull().default("active"),
-  createdBy: text("created_by")
-    .notNull()
-    .references(() => user.id),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export const apps = pgTable(
+  "apps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 120 }).notNull(),
+    slug: varchar("slug", { length: 80 }).notNull().unique(),
+    clientKey: varchar("client_key", { length: 120 }).notNull(),
+    status: varchar("status", { length: 20 }).notNull().default("active"),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+);
+
+export const appMembers = pgTable(
+  "app_members",
+  {
+    appId: uuid("app_id")
+      .notNull()
+      .references(() => apps.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    appRole: varchar("app_role", { length: 20 }).notNull(),
+    createdBy: text("created_by").references(() => user.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.appId, table.userId], name: "app_members_app_id_user_id_pk" }),
+    index("app_members_user_id_idx").on(table.userId),
+  ],
+);
 
 export const installations = pgTable(
   "installations",

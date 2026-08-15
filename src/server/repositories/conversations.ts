@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, ilike, lt, lte, or } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lt, lte, or } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { conversations } from "@/server/db/schema";
 import type { ConversationStatus } from "@/shared/constants";
@@ -9,6 +9,7 @@ export type NewConversation = typeof conversations.$inferInsert;
 
 export type ListConversationsFilters = {
   appId?: string;
+  appIds?: string[];
   status?: ConversationStatus;
   search?: string;
   cursor?: string;
@@ -75,6 +76,12 @@ async function listConversationsWithFilters(
   }
   if (filters.appId) {
     conditions.push(eq(conversations.appId, filters.appId));
+  }
+  if (filters.appIds) {
+    if (filters.appIds.length === 0) {
+      return { items: [], nextCursor: null };
+    }
+    conditions.push(inArray(conversations.appId, filters.appIds));
   }
   if (filters.status) {
     conditions.push(eq(conversations.status, filters.status));

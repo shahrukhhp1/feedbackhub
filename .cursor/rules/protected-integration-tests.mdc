@@ -1,0 +1,15 @@
+---
+description: Do not change protected core-flow integration tests without explicit user request
+globs: tests/integration/core-flow.test.ts, tests/PROTECTED_TESTS.md
+alwaysApply: false
+---
+
+# Protected integration tests
+
+`tests/integration/core-flow.test.ts` is a **protected** CI test suite for the main product flow (app → question → register → sync → answer).
+
+## Do not change unless the user explicitly asks
+
+Never modify, delete, skip, or weaken these tests as part of unrelated work. See `tests/PROTECTED_TESTS.md` for the full list and rationale.
+
+When the user **does** ask to change product behavior covered by this flow, update the tests to match the new behavior — do not remove coverage without replacement.

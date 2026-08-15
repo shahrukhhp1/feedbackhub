@@ -5,7 +5,7 @@ import { getDashboardOverview } from "@/server/services/dashboard.service";
 
 export async function GET(request: NextRequest) {
   return handleAdminRequest(request, async () => {
-    await requireSession();
-    return getDashboardOverview();
+    const session = await requireSession();
+    return getDashboardOverview(session.user.id, session.user.role);
   });
 }

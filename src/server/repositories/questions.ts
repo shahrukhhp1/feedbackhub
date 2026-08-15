@@ -9,6 +9,7 @@ import type { CursorPage } from "./types";
 
 export type ListQuestionsFilters = {
   appId?: string;
+  appIds?: string[];
   status?: string;
   cursor?: string;
   limit?: number;
@@ -84,6 +85,12 @@ export async function listQuestionsPaginated(
 
   if (filters.appId) {
     conditions.push(eq(questions.appId, filters.appId));
+  }
+  if (filters.appIds) {
+    if (filters.appIds.length === 0) {
+      return { items: [], nextCursor: null };
+    }
+    conditions.push(inArray(questions.appId, filters.appIds));
   }
   if (filters.status) {
     conditions.push(eq(questions.status, filters.status));

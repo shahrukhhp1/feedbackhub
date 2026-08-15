@@ -1,0 +1,47 @@
+---
+description: Never modify client-facing APIs unless the user explicitly requests it
+alwaysApply: true
+---
+
+# Protected client APIs
+
+Mobile apps and websites call **public client APIs** under `/api/v1/*`. These are **stable contracts** — do not change them unless the user **explicitly** asks.
+
+## Never modify without explicit user request
+
+**Route files**
+
+- `src/app/api/v1/**` — all client HTTP handlers
+
+**Validation**
+
+- `src/server/validation/mobile.ts` — request/response schemas for client APIs
+
+**Client service paths** (functions called only from `/api/v1/*` or mobile integration)
+
+- `getSyncData` in `sync.service.ts`
+- `submitAnswer` and its private helpers in `answers.service.ts`
+- `registerInstallation` in `installations.service.ts`
+- `conversations.service.ts` (mobile conversation/message flows)
+- `getActiveQuestionsForSync` in `questions` repository
+
+Do not change URLs, auth model, request/response shapes, status codes, or behavior on these paths as part of unrelated admin or UI work.
+
+## Allowed without touching client APIs
+
+- New or changed **admin** routes under `src/app/api/admin/**`
+- Admin-only service functions (e.g. `listAnswersForAdmin`, `listInboxConversations`)
+- Dashboard UI and admin validation in `src/server/validation/admin.ts`
+- Database schema that does not alter client API contracts (migrate separately; clients unaffected)
+
+## When shared code must change
+
+If a service is used by both admin and clients (e.g. `answers.service.ts`), **only** change admin entry points or add new functions. Do not alter client-facing functions or their behavior unless the user explicitly requests a client API change.
+
+## If the user asks for a client API change
+
+1. Confirm which endpoint(s) and what contract change they want.
+2. Update `docs/CLIENT_APIS.md` if the contract changes.
+3. Update or extend integration tests (`tests/integration/sync.test.ts`, core-flow if applicable).
+
+See `docs/CLIENT_APIS.md` for the full endpoint list.

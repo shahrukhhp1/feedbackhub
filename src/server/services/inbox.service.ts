@@ -2,6 +2,7 @@ import "server-only";
 
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/server/api/errors";
+import { assertCanManageApp, assertCanViewApp } from "@/server/auth/app-access";
 import { getDb } from "@/server/db";
 import { conversations, messages } from "@/server/db/schema";
 import { getAnswerById } from "@/server/repositories/answers";
@@ -13,17 +14,23 @@ import {
 import { getInstallationById } from "@/server/repositories/installations";
 import { getMessagesForConversation } from "@/server/repositories/messages";
 import { transitionConversationStatus } from "@/server/services/conversations/status";
-import type { ConversationStatus } from "@/shared/constants";
+import type { ConversationStatus, Role } from "@/shared/constants";
 import type { InboxListQuery, AdminReplyInput } from "@/server/validation/admin";
+import { resolveAccessibleAppIdsForActor } from "./apps.service";
 import { logAction } from "./audit.service";
 
-export async function listInboxConversations(query: InboxListQuery) {
+export async function listInboxConversations(
+  actorUserId: string,
+  actorRole: Role | string,
+  query: InboxListQuery,
+) {
+  const appIds = await resolveAccessibleAppIdsForActor(actorUserId, actorRole, query.appId);
   const page = await listConversations({
-    appId: query.appId,
     status: query.status,
     search: query.search,
     cursor: query.cursor,
     limit: query.limit,
+    appIds,
   });
 
   return {
@@ -33,11 +40,16 @@ export async function listInboxConversations(query: InboxListQuery) {
   };
 }
 
-export async function getInboxConversationDetail(conversationId: string) {
+export async function getInboxConversationDetail(
+  conversationId: string,
+  actorUserId: string,
+  actorRole: Role | string,
+) {
   const conversation = await getConversation(conversationId);
   if (!conversation) {
     throw ApiError.notFound("Conversation not found");
   }
+  await assertCanViewApp(actorUserId, actorRole, conversation.appId);
 
   const [installation, answer, messagePage] = await Promise.all([
     getInstallationById(conversation.installationId),
@@ -58,12 +70,14 @@ export async function replyToConversation(
   conversationId: string,
   input: AdminReplyInput,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
   const conversation = await getConversation(conversationId);
   if (!conversation) {
     throw ApiError.notFound("Conversation not found");
   }
+  await assertCanManageApp(actorUserId, actorRole, conversation.appId);
 
   if (conversation.status === "closed") {
     throw ApiError.conflict("Cannot reply to a closed conversation");
@@ -116,14 +130,23 @@ export async function replyToConversation(
 export async function closeConversation(
   conversationId: string,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
-  return setConversationStatus(conversationId, { type: "admin_close" }, "inbox.closed", actorUserId, ipAddress);
+  return setConversationStatus(
+    conversationId,
+    { type: "admin_close" },
+    "inbox.closed",
+    actorUserId,
+    actorRole,
+    ipAddress,
+  );
 }
 
 export async function reopenConversation(
   conversationId: string,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
   return setConversationStatus(
@@ -131,6 +154,7 @@ export async function reopenConversation(
     { type: "admin_reopen" },
     "inbox.reopened",
     actorUserId,
+    actorRole,
     ipAddress,
   );
 }
@@ -140,12 +164,14 @@ async function setConversationStatus(
   event: Parameters<typeof transitionConversationStatus>[1],
   auditAction: string,
   actorUserId: string,
+  actorRole: Role | string,
   ipAddress?: string,
 ) {
   const conversation = await getConversation(conversationId);
   if (!conversation) {
     throw ApiError.notFound("Conversation not found");
   }
+  await assertCanManageApp(actorUserId, actorRole, conversation.appId);
 
   const nextStatus = transitionConversationStatus(
     conversation.status as ConversationStatus,

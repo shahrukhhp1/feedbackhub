@@ -15,7 +15,7 @@ const appIdSchema = z.uuid();
 
 export async function GET(request: NextRequest, context: RouteContext) {
   return handleAdminRequest(request, async () => {
-    await requireSession();
+    const session = await requireSession();
     const { appId } = await context.params;
     const parsed = appIdSchema.safeParse(appId);
     if (!parsed.success) {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     return {
-      items: await listAppInstallations(parsed.data, {
+      items: await listAppInstallations(parsed.data, session.user.id, session.user.role, {
         includeRevoked: query.includeRevoked,
       }),
     };

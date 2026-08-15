@@ -19,8 +19,6 @@ tags:
     description: Questions and admin reply synchronization
   - name: Answers
     description: Question answer submission
-  - name: Questions
-    description: Question dismissal
   - name: Conversations
     description: Feedback threads and messages
   - name: Messages
@@ -239,57 +237,6 @@ paths:
                   code: FORBIDDEN
                   message: Question is not currently available
                   requestId: "req-forbidden-example"
-        "404":
-          description: Question not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "429":
-          $ref: "#/components/responses/RateLimited"
-        "500":
-          $ref: "#/components/responses/InternalError"
-
-  /questions/{questionId}/dismiss:
-    post:
-      tags: [Questions]
-      summary: Dismiss a remote question
-      description: |
-        Prevents the question from being returned in future sync responses for this installation.
-      operationId: dismissQuestion
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: questionId
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/DismissQuestionRequest"
-            example:
-              clientRequestId: "770e8400-e29b-41d4-a716-446655440008"
-      responses:
-        "200":
-          description: Question dismissed
-          headers:
-            x-request-id:
-              $ref: "#/components/headers/XRequestId"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DismissQuestionResponse"
-              example:
-                dismissed: true
-        "400":
-          $ref: "#/components/responses/ValidationError"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
         "404":
           description: Question not found
           content:
@@ -757,21 +704,6 @@ components:
         conversationId:
           type: string
           format: uuid
-
-    DismissQuestionRequest:
-      type: object
-      required: [clientRequestId]
-      properties:
-        clientRequestId:
-          type: string
-          format: uuid
-
-    DismissQuestionResponse:
-      type: object
-      required: [dismissed]
-      properties:
-        dismissed:
-          type: boolean
 
     CreateConversationRequest:
       type: object

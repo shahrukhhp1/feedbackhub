@@ -1,5 +1,6 @@
 import type {
   AnswerType,
+  AppMemberRole,
   AppStatus,
   ConversationStatus,
   QuestionStatus,
@@ -24,6 +25,12 @@ export interface DashboardOverview {
   }>;
 }
 
+export interface AppAccess {
+  appRole: AppMemberRole | null;
+  canManageApp: boolean;
+  canManageMembers: boolean;
+}
+
 export interface App {
   id: string;
   name: string;
@@ -33,6 +40,20 @@ export interface App {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  access?: AppAccess;
+}
+
+export interface AppMember {
+  userId: string;
+  email: string;
+  name: string;
+  appRole: AppMemberRole;
+  createdAt: string;
+}
+
+export interface AppMembersResponse {
+  items: AppMember[];
+  canManageMembers: boolean;
 }
 
 export interface Installation {

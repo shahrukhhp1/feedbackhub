@@ -50,7 +50,7 @@ describe.skipIf(!isTestDatabaseConfigured())("auth", () => {
     const { app, clientKey } = await createTestApp(userId);
     const installation = await registerTestInstallation(app.id, clientKey);
 
-    await revokeAppInstallation(installation.installationId, userId);
+    await revokeAppInstallation(installation.installationId, userId, "superadmin");
 
     expect(await getInstallationByTokenHash(hashToken(installation.token))).toBeUndefined();
   });

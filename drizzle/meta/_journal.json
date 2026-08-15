@@ -36,6 +36,13 @@
       "when": 1786915632343,
       "tag": "0004_drop_question_dismissals",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787015632344,
+      "tag": "0005_app_members",
+      "breakpoints": true
     }
   ]
 }

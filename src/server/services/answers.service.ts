@@ -2,6 +2,7 @@ import "server-only";
 
 import { ApiError } from "@/server/api/errors";
 import { getDb } from "@/server/db";
+import { assertCanManageApp, assertCanViewApp } from "@/server/auth/app-access";
 import { getAppById } from "@/server/repositories/apps";
 import {
   createAnswer,
@@ -17,7 +18,9 @@ import { getQuestion } from "@/server/repositories/questions";
 import { escapeCsvField } from "@/server/security/csv";
 import { validateAnswerContent } from "@/server/validation/answers";
 import type { SubmitAnswerInput } from "@/server/validation/mobile";
+import type { Role } from "@/shared/constants";
 import { findConversationByAnswerId } from "./conversations.service";
+import { resolveAccessibleAppIdsForActor } from "./apps.service";
 import { isQuestionEligible } from "./questions/eligibility";
 
 export type SubmitAnswerResult = {
@@ -165,16 +168,21 @@ export async function getAnswerConversation(answerId: string) {
   return getConversation(conversation.id);
 }
 
-export async function listAnswersForAdmin(filters: {
-  appId?: string;
-  questionId?: string;
-  from?: string;
-  to?: string;
-  cursor?: string;
-  limit?: number;
-}) {
+export async function listAnswersForAdmin(
+  actorUserId: string,
+  actorRole: Role | string,
+  filters: {
+    appId?: string;
+    questionId?: string;
+    from?: string;
+    to?: string;
+    cursor?: string;
+    limit?: number;
+  },
+) {
+  const appIds = await resolveAccessibleAppIdsForActor(actorUserId, actorRole, filters.appId);
   const page = await listAnswers({
-    appId: filters.appId,
+    appIds,
     questionId: filters.questionId,
     from: filters.from ? new Date(filters.from) : undefined,
     to: filters.to ? new Date(filters.to) : undefined,
@@ -201,7 +209,14 @@ export async function listAnswersForAdmin(filters: {
   };
 }
 
-export async function exportAnswersCsv(appId: string, from: string, to: string) {
+export async function exportAnswersCsv(
+  appId: string,
+  from: string,
+  to: string,
+  actorUserId: string,
+  actorRole: Role | string,
+) {
+  await assertCanViewApp(actorUserId, actorRole, appId);
   const app = await getAppById(appId);
   if (!app) {
     throw ApiError.notFound("App not found");

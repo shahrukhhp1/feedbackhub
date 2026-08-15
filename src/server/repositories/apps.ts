@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { apps } from "@/server/db/schema";
 import type { CursorPage } from "./types";
@@ -41,6 +41,7 @@ export type ListAppsFilters = {
   status?: string;
   cursor?: string;
   limit?: number;
+  appIds?: string[];
 };
 
 function encodeAppCursor(updatedAt: Date, id: string): string {
@@ -72,6 +73,12 @@ export async function listAppsPaginated(
 
   if (filters.status) {
     conditions.push(eq(apps.status, filters.status));
+  }
+  if (filters.appIds) {
+    if (filters.appIds.length === 0) {
+      return { items: [], nextCursor: null };
+    }
+    conditions.push(inArray(apps.id, filters.appIds));
   }
   if (filters.cursor) {
     const { updatedAt, id } = decodeAppCursor(filters.cursor);

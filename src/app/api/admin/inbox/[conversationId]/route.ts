@@ -15,7 +15,7 @@ const conversationIdSchema = z.uuid();
 
 export async function GET(request: NextRequest, context: RouteContext) {
   return handleAdminRequest(request, async () => {
-    await requireSession();
+    const session = await requireSession();
     const { conversationId } = await context.params;
     const parsed = conversationIdSchema.safeParse(conversationId);
     if (!parsed.success) {
@@ -23,6 +23,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     parseQuery(request, conversationMessagesQuerySchema);
-    return getInboxConversationDetail(parsed.data);
+    return getInboxConversationDetail(
+      parsed.data,
+      session.user.id,
+      session.user.role,
+    );
   });
 }

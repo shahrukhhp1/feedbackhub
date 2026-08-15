@@ -112,7 +112,7 @@ Poll sync periodically (e.g. on app foreground, after network reconnect, or on a
 
 ### Sync rules
 
-- **Questions** — active, in schedule window, not answered or dismissed (unless `allowMultipleAnswers`)
+- **Questions** — active, in schedule window, not answered (unless `allowMultipleAnswers`)
 - **Replies** — admin and system messages with `sequence > after`, up to 100 per request
 - When `hasMore` is `true`, call sync again with `after=nextCursor` until all replies are fetched
 - Persist `nextCursor` locally; on next sync, start from the saved cursor
@@ -173,18 +173,6 @@ When the question is defined in the app, not on the server:
 ```
 
 An answer creates a linked conversation so admins can reply.
-
-### Dismiss a question
-
-**Endpoint:** `POST /api/v1/questions/{questionId}/dismiss`
-
-```json
-{
-  "clientRequestId": "770e8400-e29b-41d4-a716-446655440005"
-}
-```
-
-Dismissed questions are not returned in future syncs for that installation.
 
 ## 5. Submit general feedback
 
@@ -340,7 +328,6 @@ App launch
   │    └─ Acknowledge delivered/read
   └─ User action
        ├─ Answer question → POST /answers
-       ├─ Dismiss question → POST /questions/.../dismiss
        ├─ Send feedback → POST /conversations
        └─ Reply in thread → POST /conversations/.../messages
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   ANSWER_TYPES,
+  APP_MEMBER_ROLES,
   APP_STATUSES,
   CONVERSATION_STATUSES,
   DEFAULT_PAGE_LIMIT,
@@ -42,6 +43,15 @@ export const updateAppSchema = z
   .refine((data) => data.name !== undefined || data.status !== undefined, {
     message: "At least one field must be provided",
   });
+
+export const addAppMemberSchema = z.object({
+  email: z.email().max(320),
+  appRole: z.enum(APP_MEMBER_ROLES),
+});
+
+export const updateAppMemberSchema = z.object({
+  appRole: z.enum(APP_MEMBER_ROLES),
+});
 
 export const listAppsQuerySchema = paginationQuerySchema.extend({
   status: z.enum(APP_STATUSES).optional(),

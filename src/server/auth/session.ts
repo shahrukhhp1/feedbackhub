@@ -14,7 +14,7 @@ export async function getSession() {
 export async function requireSession() {
   const session = await getSession();
 
-  if (!session?.user) {
+  if (!session?.user?.id) {
     throw new ApiError("UNAUTHORIZED", "Authentication required");
   }
 
@@ -22,7 +22,9 @@ export async function requireSession() {
     throw new ApiError("FORBIDDEN", "Account is disabled");
   }
 
-  return session;
+  return session as typeof session & {
+    user: typeof session.user & { id: string; role: Role };
+  };
 }
 
 export async function requireRole(roles: Role[]) {

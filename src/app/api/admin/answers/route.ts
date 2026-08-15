@@ -7,8 +7,8 @@ import { listAnswersQuerySchema } from "@/server/validation/admin";
 
 export async function GET(request: NextRequest) {
   return handleAdminRequest(request, async () => {
-    await requireSession();
+    const session = await requireSession();
     const query = parseQuery(request, listAnswersQuerySchema);
-    return listAnswersForAdmin(query);
+    return listAnswersForAdmin(session.user.id, session.user.role, query);
   });
 }

@@ -29,6 +29,9 @@ export type SourceType = (typeof SOURCE_TYPES)[number];
 export const PLATFORMS = ["ios", "android", "web", "other"] as const;
 export type Platform = (typeof PLATFORMS)[number];
 
+export const APP_MEMBER_ROLES = ["admin", "viewer"] as const;
+export type AppMemberRole = (typeof APP_MEMBER_ROLES)[number];
+
 export const MAX_MESSAGE_BODY_LENGTH = 10_000;
 export const MAX_SUBJECT_LENGTH = 200;
 export const SYNC_REPLY_LIMIT = 100;

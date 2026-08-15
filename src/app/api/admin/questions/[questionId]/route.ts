@@ -3,7 +3,6 @@ import { z } from "zod";
 import { ApiError } from "@/server/api/errors";
 import { handleAdminRequest } from "@/server/api/handler";
 import { parseBody } from "@/server/api/request";
-import { assertPermission, canManageQuestions } from "@/server/auth/permissions";
 import { requireSession } from "@/server/auth/session";
 import {
   getQuestionById,
@@ -19,20 +18,19 @@ const questionIdSchema = z.uuid();
 
 export async function GET(request: NextRequest, context: RouteContext) {
   return handleAdminRequest(request, async () => {
-    await requireSession();
+    const session = await requireSession();
     const { questionId } = await context.params;
     const parsed = questionIdSchema.safeParse(questionId);
     if (!parsed.success) {
       throw ApiError.validation("Invalid question ID");
     }
-    return getQuestionById(parsed.data);
+    return getQuestionById(parsed.data, session.user.id, session.user.role);
   });
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
   return handleAdminRequest(request, async ({ clientIp }) => {
     const session = await requireSession();
-    assertPermission(canManageQuestions(session.user.role));
 
     const { questionId } = await context.params;
     const parsed = questionIdSchema.safeParse(questionId);
@@ -41,6 +39,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const body = await parseBody(request, updateQuestionSchema);
-    return updateQuestionDetails(parsed.data, body, session.user.id, clientIp);
+    return updateQuestionDetails(
+      parsed.data,
+      body,
+      session.user.id,
+      session.user.role,
+      clientIp,
+    );
   });
 }

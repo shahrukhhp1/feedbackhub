@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, lt, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, lte, or } from "drizzle-orm";
 import { getDb } from "@/server/db";
 import { answers, installations } from "@/server/db/schema";
 import type { CursorPage, DbOrTransaction } from "./types";
@@ -9,6 +9,7 @@ export type AnswerWithUser = Answer & { userGuid: string; contactEmail: string |
 
 export type ListAnswersFilters = {
   appId?: string;
+  appIds?: string[];
   questionId?: string;
   from?: Date;
   to?: Date;
@@ -73,6 +74,12 @@ export async function listAnswers(
 
   if (filters.appId) {
     conditions.push(eq(answers.appId, filters.appId));
+  }
+  if (filters.appIds) {
+    if (filters.appIds.length === 0) {
+      return { items: [], nextCursor: null };
+    }
+    conditions.push(inArray(answers.appId, filters.appIds));
   }
   if (filters.questionId) {
     conditions.push(eq(answers.questionId, filters.questionId));

@@ -60,9 +60,9 @@ describe.skipIf(!isTestDatabaseConfigured())("sync", () => {
         clientRequestId: randomUUID(),
       });
 
-      await replyToConversation(conversationId, { body: "Reply 1" }, userId);
-      await replyToConversation(conversationId, { body: "Reply 2" }, userId);
-      await replyToConversation(conversationId, { body: "Reply 3" }, userId);
+      await replyToConversation(conversationId, { body: "Reply 1" }, userId, "superadmin");
+      await replyToConversation(conversationId, { body: "Reply 2" }, userId, "superadmin");
+      await replyToConversation(conversationId, { body: "Reply 3" }, userId, "superadmin");
 
       const firstPage = await getSyncData(installationRecord!, 0);
       expect(firstPage.replies).toHaveLength(2);
@@ -104,7 +104,7 @@ describe.skipIf(!isTestDatabaseConfigured())("sync", () => {
       clientRequestId: randomUUID(),
     });
 
-    await replyToConversation(conversationId, { body: "Thanks, we can help." }, userId);
+    await replyToConversation(conversationId, { body: "Thanks, we can help." }, userId, "superadmin");
 
     const sync = await getSyncData(installationRecord!, 0);
     expect(sync.questions.some((item) => item.id === question.id)).toBe(true);

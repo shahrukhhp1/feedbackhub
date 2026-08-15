@@ -11,9 +11,9 @@ import { createAppSchema, listAppsQuerySchema } from "@/server/validation/admin"
 
 export async function GET(request: NextRequest) {
   return handleAdminRequest(request, async () => {
-    await requireSession();
+    const session = await requireSession();
     const query = parseQuery(request, listAppsQuerySchema);
-    return listApps(query);
+    return listApps(session.user.id, session.user.role, query);
   });
 }
 
@@ -23,6 +23,6 @@ export async function POST(request: NextRequest) {
     assertPermission(canManageApps(session.user.role));
 
     const body = await parseBody(request, createAppSchema);
-    return createAppWithKey(body, session.user.id, clientIp);
+    return createAppWithKey(body, session.user.id, session.user.role, clientIp);
   });
 }

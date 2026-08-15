@@ -2,6 +2,8 @@ import type { ApiErrorResponse } from "@/shared/contracts/api";
 import type {
   Answer,
   App,
+  AppMember,
+  AppMembersResponse,
   AuditLogEntry,
   Conversation,
   ConversationDetailResponse,
@@ -13,7 +15,7 @@ import type {
   Question,
   TeamUser,
 } from "@/lib/admin-types";
-import type { Role } from "@/shared/constants";
+import type { Role, AppMemberRole } from "@/shared/constants";
 
 export class AdminApiError extends Error {
   constructor(
@@ -88,6 +90,24 @@ export const adminApi = {
     adminFetch<{ items: Installation[] }>(
       `/api/admin/apps/${appId}/installations${qs({ appId, includeRevoked: params?.includeRevoked })}`,
     ),
+
+  listAppMembers: (appId: string) =>
+    adminFetch<AppMembersResponse>(`/api/admin/apps/${appId}/members`),
+
+  addAppMember: (appId: string, data: { email: string; appRole: AppMemberRole }) =>
+    adminFetch<AppMember>(`/api/admin/apps/${appId}/members`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  updateAppMember: (appId: string, userId: string, appRole: AppMemberRole) =>
+    adminFetch<AppMember>(`/api/admin/apps/${appId}/members/${userId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ appRole }),
+    }),
+
+  removeAppMember: (appId: string, userId: string) =>
+    adminFetch<void>(`/api/admin/apps/${appId}/members/${userId}`, { method: "DELETE" }),
 
   revokeInstallation: (id: string) =>
     adminFetch<void>(`/api/admin/installations/${id}/revoke`, { method: "POST" }),
