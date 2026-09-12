@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Lite bundle: app + static only. node_modules must already exist on the server from a full deploy.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,6 +15,8 @@ rm -rf "$DEPLOY"
 mkdir -p "$DEPLOY/.next"
 
 cp -a "$STANDALONE/." "$DEPLOY/"
+rm -rf "$DEPLOY/node_modules"
+
 cp -a "$ROOT/.next/static" "$DEPLOY/.next/static"
 cp -a "$ROOT/public" "$DEPLOY/public"
 cp -a "$ROOT/drizzle" "$DEPLOY/drizzle"
@@ -23,17 +26,4 @@ mkdir -p "$DEPLOY/logs"
 source "$ROOT/scripts/verify-deploy-bundle.sh"
 verify_deploy_bundle "$DEPLOY"
 
-required_modules=(
-  "@swc/helpers"
-  "@next/env"
-  "@next/swc-win32-x64-msvc"
-)
-
-for module_path in "${required_modules[@]}"; do
-  if [[ ! -d "$DEPLOY/node_modules/$module_path" ]]; then
-    echo "Deploy bundle is missing $module_path (standalone trace may be incomplete)." >&2
-    exit 1
-  fi
-done
-
-echo "Lite deploy bundle ready at $DEPLOY (traced node_modules only)"
+echo "Lite deploy bundle ready at $DEPLOY (no node_modules — run full deploy when dependencies change)"

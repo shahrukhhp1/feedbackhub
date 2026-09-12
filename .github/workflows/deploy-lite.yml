@@ -43,8 +43,8 @@ jobs:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
         run: pnpm build
 
-      - name: Prepare standalone bundle
-        run: bash scripts/prepare-standalone.sh
+      - name: Prepare standalone bundle (lite)
+        run: bash scripts/prepare-standalone-lite.sh
 
       - name: Verify deploy static assets
         run: |
@@ -64,3 +64,5 @@ jobs:
           exclude: |
             **/.git*
             **/.git*/**
+            **/node_modules/**
+            node_modules/**
