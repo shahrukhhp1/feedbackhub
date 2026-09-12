@@ -26,6 +26,11 @@ cp -a "$ROOT/drizzle" "$DEPLOY/drizzle"
 cp "$ROOT/web.config" "$DEPLOY/web.config"
 mkdir -p "$DEPLOY/logs"
 
+cp -a "$ROOT/.next/static" "$DEPLOY/.next/static"
+
+source "$ROOT/scripts/verify-deploy-bundle.sh"
+verify_deploy_bundle "$DEPLOY"
+
 # Standalone tracing misses several Next runtime packages with pnpm on Windows.
 # Replace the traced node_modules with a full production install.
 cd "$ROOT"

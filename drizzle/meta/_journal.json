@@ -43,6 +43,13 @@
       "when": 1787015632344,
       "tag": "0005_app_members",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787115632345,
+      "tag": "0006_seed_default_apps",
+      "breakpoints": true
     }
   ]
 }

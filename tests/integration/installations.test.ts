@@ -8,7 +8,6 @@ import {
   isTestDatabaseConfigured,
   loginAsAdmin,
   registerTestInstallation,
-  resetTestData,
   setupTestDb,
   teardownTestDb,
 } from "./helpers";
@@ -20,10 +19,6 @@ describe.skipIf(!isTestDatabaseConfigured())("installations", () => {
 
   afterAll(async () => {
     await teardownTestDb();
-  });
-
-  beforeEach(async () => {
-    await resetTestData();
   });
 
   it("registers a new installation with a valid client key", async () => {

@@ -9,7 +9,6 @@ import {
   isTestDatabaseConfigured,
   loginAsAdmin,
   registerTestInstallation,
-  resetTestData,
   setupTestDb,
   teardownTestDb,
 } from "./helpers";
@@ -21,10 +20,6 @@ describe.skipIf(!isTestDatabaseConfigured())("isolation", () => {
 
   afterAll(async () => {
     await teardownTestDb();
-  });
-
-  beforeEach(async () => {
-    await resetTestData();
   });
 
   it("prevents answering another app's question", async () => {

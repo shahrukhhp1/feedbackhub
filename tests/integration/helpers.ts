@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { hashPassword } from "better-auth/crypto";
-import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
@@ -15,18 +14,70 @@ import { createAppWithKey } from "@/server/services/apps.service";
 import type { Role } from "@/shared/constants";
 
 export const TEST_DATABASE_SKIP_MESSAGE =
-  "Skipping integration tests: set TEST_DATABASE_URL to a Postgres connection string.";
+  "Skipping integration tests: set TEST_DATABASE_URL to a dedicated Postgres database (never production).";
 
-export function isTestDatabaseConfigured(): boolean {
-  return Boolean(process.env.TEST_DATABASE_URL?.trim());
+const INTEGRATION_TEST_ALLOW_REMOTE = "INTEGRATION_TEST_ALLOW_REMOTE_DATABASE";
+
+function getInitialDatabaseUrl(): string | undefined {
+  return globalThis.__FEEDBACKHUB_INITIAL_DATABASE_URL__;
 }
 
-function getTestDatabaseUrl(): string {
-  const url = process.env.TEST_DATABASE_URL?.trim() || process.env.DATABASE_URL?.trim();
+function parsePostgresUrl(connectionString: string): { hostname: string; database: string } {
+  const parsed = new URL(connectionString.replace(/^postgresql:/i, "http:"));
+  const database = decodeURIComponent(parsed.pathname.replace(/^\//, "") || "");
+  return { hostname: parsed.hostname.toLowerCase(), database };
+}
+
+function isLocalHostname(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+function looksLikeTestDatabaseName(database: string): boolean {
+  return /(_test|test)/i.test(database);
+}
+
+/** Refuse remote/production-looking URLs unless explicitly allowed. */
+export function assertSafeIntegrationDatabaseUrl(connectionString: string): void {
+  const { hostname, database } = parsePostgresUrl(connectionString);
+
+  if (isLocalHostname(hostname)) {
+    return;
+  }
+
+  if (process.env[INTEGRATION_TEST_ALLOW_REMOTE] === "1" && /_test$/i.test(database)) {
+    return;
+  }
+
+  throw new Error(
+    `Integration tests refuse to use ${hostname}/${database}. ` +
+      `Use a local Postgres URL, or a remote database whose name ends with _test and set ${INTEGRATION_TEST_ALLOW_REMOTE}=1.`,
+  );
+}
+
+/** Validates TEST_DATABASE_URL; throws if it could target production. */
+export function validateIntegrationDatabaseConfig(): string {
+  const url = process.env.TEST_DATABASE_URL?.trim();
   if (!url) {
     throw new Error(TEST_DATABASE_SKIP_MESSAGE);
   }
+
+  assertSafeIntegrationDatabaseUrl(url);
+
+  const initial = getInitialDatabaseUrl();
+  if (initial && initial === url) {
+    const { hostname, database } = parsePostgresUrl(url);
+    if (!(isLocalHostname(hostname) && looksLikeTestDatabaseName(database))) {
+      throw new Error(
+        "TEST_DATABASE_URL must not be the same connection string as DATABASE_URL from .env unless it is a local database whose name clearly indicates test (e.g. feedbackhub_test).",
+      );
+    }
+  }
+
   return url;
+}
+
+export function isTestDatabaseConfigured(): boolean {
+  return Boolean(process.env.TEST_DATABASE_URL?.trim());
 }
 
 function configureTestEnv(databaseUrl: string): void {
@@ -56,37 +107,16 @@ async function ensureDatabaseSchema(databaseUrl: string): Promise<void> {
 }
 
 export async function setupTestDb(): Promise<void> {
-  const databaseUrl = getTestDatabaseUrl();
+  const databaseUrl = validateIntegrationDatabaseConfig();
   configureTestEnv(databaseUrl);
   await closeDb();
   await ensureDatabaseSchema(databaseUrl);
   getDb();
-  await resetTestData();
 }
 
 export async function teardownTestDb(): Promise<void> {
   await closeDb();
   resetEnvCache();
-}
-
-export async function resetTestData(): Promise<void> {
-  const db = getDb();
-  await db.execute(sql`
-    TRUNCATE TABLE
-      audit_logs,
-      messages,
-      conversations,
-      answers,
-      questions,
-      installations,
-      app_members,
-      apps,
-      verification,
-      session,
-      account,
-      "user"
-    RESTART IDENTITY CASCADE
-  `);
 }
 
 export async function createTestAdminUser(role: Role = "superadmin") {

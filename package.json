@@ -16,6 +16,7 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate.mjs",
+    "db:seed-apps": "node scripts/seed-default-apps.mjs",
     "db:studio": "drizzle-kit studio",
     "bootstrap:superadmin": "node scripts/bootstrap-superadmin.mjs",
     "ci": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:integration:core && pnpm build"

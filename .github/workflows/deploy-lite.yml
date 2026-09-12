@@ -43,8 +43,14 @@ jobs:
           AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
         run: pnpm build
 
-      - name: Prepare standalone bundle (lite)
-        run: bash scripts/prepare-standalone-lite.sh
+      - name: Prepare standalone bundle
+        run: bash scripts/prepare-standalone.sh
+
+      - name: Verify deploy static assets
+        run: |
+          test -d deploy/.next/static/chunks
+          ls deploy/.next/static/chunks | head -5
+          test "$(find deploy/.next/static -name '*.css' | wc -l)" -ge 1
 
       - name: Upload via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
@@ -54,6 +60,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: deploy/
           server-dir: ${{ env.FTP_SERVER_DIR }}
+          dangerous-clean-slate: false
           exclude: |
             **/.git*
             **/.git*/**

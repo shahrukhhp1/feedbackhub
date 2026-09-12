@@ -20,6 +20,9 @@ cp -a "$ROOT/drizzle" "$DEPLOY/drizzle"
 cp "$ROOT/web.config" "$DEPLOY/web.config"
 mkdir -p "$DEPLOY/logs"
 
+source "$ROOT/scripts/verify-deploy-bundle.sh"
+verify_deploy_bundle "$DEPLOY"
+
 required_modules=(
   "@swc/helpers"
   "@next/env"

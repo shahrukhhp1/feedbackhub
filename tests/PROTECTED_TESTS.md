@@ -31,12 +31,23 @@ Allowed without explicit user request:
 
 ## Running locally
 
+Use a **separate** Postgres database. Integration tests **never TRUNCATE or wipe** the database — they only insert test rows (unique IDs per run).
+
 ```bash
 export TEST_DATABASE_URL="postgresql://user:pass@localhost:5432/feedback_test"
 pnpm test:integration:core
 ```
 
 Without `TEST_DATABASE_URL`, integration tests are skipped.
+
+**Safety (read this):**
+
+- `env-guard.ts` clears `DATABASE_URL` before tests run; only `TEST_DATABASE_URL` is used after validation.
+- Remote hosts are refused unless the database name ends with `_test` and `INTEGRATION_TEST_ALLOW_REMOTE_DATABASE=1`.
+- `TEST_DATABASE_URL` must not equal your `.env` `DATABASE_URL` unless it is **local** and the database name includes `test` (e.g. `feedback_test`).
+- No `TRUNCATE` / full wipe — tests only insert rows with random IDs.
+- `pnpm test` (unit) never opens Postgres. `pnpm test:e2e` hits HTTP only, not direct DB from test code.
+- Never set `TEST_DATABASE_URL` to production. `pnpm db:migrate`, `pnpm db:seed-apps`, and `pnpm bootstrap:superadmin` use `DATABASE_URL` only — not test commands.
 
 ## GitHub Actions (manual only)
 

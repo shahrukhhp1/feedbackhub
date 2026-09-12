@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { beforeAll, afterAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, afterAll, describe, expect, it } from "vitest";
 import * as messagesRepo from "@/server/repositories/messages";
 import { createQuestion } from "@/server/repositories/questions";
 import { getInstallationById } from "@/server/repositories/installations";
@@ -11,7 +11,6 @@ import {
   isTestDatabaseConfigured,
   loginAsAdmin,
   registerTestInstallation,
-  resetTestData,
   setupTestDb,
   teardownTestDb,
 } from "./helpers";
@@ -23,10 +22,6 @@ describe.skipIf(!isTestDatabaseConfigured())("sync", () => {
 
   afterAll(async () => {
     await teardownTestDb();
-  });
-
-  beforeEach(async () => {
-    await resetTestData();
   });
 
   it("paginates admin replies using the sequence cursor", async () => {

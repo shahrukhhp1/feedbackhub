@@ -14,7 +14,6 @@ import {
 } from "./api-helpers";
 import {
   isTestDatabaseConfigured,
-  resetTestData,
   setupTestDb,
   teardownTestDb,
 } from "./helpers";
@@ -31,7 +30,6 @@ describe.skipIf(!isTestDatabaseConfigured())("core flow (protected API)", () => 
 
   beforeEach(async () => {
     clearAdminSessionCookie();
-    await resetTestData();
   });
 
   it("creates an app, question, registers, syncs, and submits an answer via HTTP APIs", async () => {

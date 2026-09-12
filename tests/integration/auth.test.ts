@@ -10,7 +10,6 @@ import {
   isTestDatabaseConfigured,
   loginAsAdmin,
   registerTestInstallation,
-  resetTestData,
   setupTestDb,
   teardownTestDb,
 } from "./helpers";
@@ -22,10 +21,6 @@ describe.skipIf(!isTestDatabaseConfigured())("auth", () => {
 
   afterAll(async () => {
     await teardownTestDb();
-  });
-
-  beforeEach(async () => {
-    await resetTestData();
   });
 
   it("blocks sign-in for disabled users", async () => {
