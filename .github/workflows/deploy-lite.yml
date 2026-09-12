@@ -49,6 +49,9 @@ jobs:
       - name: Verify deploy static assets
         run: |
           test -d deploy/.next/static/chunks
+          test -f deploy/build-id.txt
+          echo "BUILD_ID=$(cat deploy/build-id.txt)"
+          echo "Static files: $(wc -l < deploy/static-file-manifest.txt)"
           ls deploy/.next/static/chunks | head -5
           test "$(find deploy/.next/static -name '*.css' | wc -l)" -ge 1
 

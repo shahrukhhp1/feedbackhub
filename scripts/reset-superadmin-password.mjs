@@ -44,15 +44,34 @@ if (!email || !newPassword) {
 
 const sql = postgres(connectionString, { max: 1 });
 
-const [row] = await sql`
-  SELECT u.id, u.role, u.disabled_at
-  FROM "user" u
-  WHERE u.email = ${email}
-  LIMIT 1
-`;
+let row = (
+  await sql`
+    SELECT u.id, u.email, u.role, u.disabled_at
+    FROM "user" u
+    WHERE u.email = ${email}
+    LIMIT 1
+  `
+)[0];
 
 if (!row) {
-  console.error(`No user with email ${email}. Run pnpm bootstrap:superadmin first.`);
+  const admins = await sql`
+    SELECT email, role FROM "user"
+    WHERE role IN ('superadmin', 'admin') AND disabled_at IS NULL
+    ORDER BY created_at ASC
+  `;
+
+  if (admins.length === 0) {
+    console.error(`No user with email ${email} and no admins in DB. Run pnpm bootstrap:superadmin first.`);
+    await sql.end();
+    process.exit(1);
+  }
+
+  console.error(`No user with email ${email}.`);
+  console.error("Existing admin accounts:");
+  for (const admin of admins) {
+    console.error(`  - ${admin.email} (${admin.role})`);
+  }
+  console.error("Set SUPERADMIN_EMAIL to one of these, or run pnpm bootstrap:superadmin to create contact@.");
   await sql.end();
   process.exit(1);
 }
@@ -84,5 +103,5 @@ await sql`
   WHERE id = ${row.id}
 `;
 
-console.log(`Password reset for ${email}. Sign in with SUPERADMIN_INITIAL_PASSWORD from .env, then change password.`);
+console.log(`Password reset for ${row.email}. Sign in with SUPERADMIN_INITIAL_PASSWORD from .env, then change password.`);
 await sql.end();

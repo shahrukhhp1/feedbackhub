@@ -26,7 +26,11 @@ cp -a "$ROOT/drizzle" "$DEPLOY/drizzle"
 cp "$ROOT/web.config" "$DEPLOY/web.config"
 mkdir -p "$DEPLOY/logs"
 
-cp -a "$ROOT/.next/static" "$DEPLOY/.next/static"
+if [[ -f "$ROOT/.next/BUILD_ID" ]]; then
+  cp "$ROOT/.next/BUILD_ID" "$DEPLOY/build-id.txt"
+  cp "$ROOT/.next/BUILD_ID" "$DEPLOY/.next/BUILD_ID"
+fi
+find "$DEPLOY/.next/static" -type f > "$DEPLOY/static-file-manifest.txt"
 
 source "$ROOT/scripts/verify-deploy-bundle.sh"
 verify_deploy_bundle "$DEPLOY"

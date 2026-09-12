@@ -45,24 +45,28 @@ if (!superadminEmail || !superadminPassword) {
 
 const sql = postgres(connectionString, { max: 1 });
 
-const existingAdmins = await sql`
-  SELECT id FROM "user" WHERE role IN ('superadmin', 'admin') LIMIT 1
+const existingUser = await sql`
+  SELECT id, role FROM "user" WHERE email = ${superadminEmail} LIMIT 1
 `;
 
-if (existingAdmins.length > 0) {
-  console.log("Admin user(s) already exist; skipping bootstrap.");
+if (existingUser.length > 0) {
+  console.log(
+    `User ${superadminEmail} already exists (role: ${existingUser[0].role}). ` +
+      "Run pnpm reset-superadmin-password to set password from .env.",
+  );
   await sql.end();
   process.exit(0);
 }
 
-const existingUser = await sql`
-  SELECT id FROM "user" WHERE email = ${superadminEmail} LIMIT 1
+const otherAdmins = await sql`
+  SELECT email, role FROM "user" WHERE role IN ('superadmin', 'admin') ORDER BY created_at ASC
 `;
 
-if (existingUser.length > 0) {
-  console.log("User with SUPERADMIN_EMAIL already exists; skipping bootstrap.");
-  await sql.end();
-  process.exit(0);
+if (otherAdmins.length > 0) {
+  console.log("Other admin users already in DB (bootstrap will still create SUPERADMIN_EMAIL):");
+  for (const admin of otherAdmins) {
+    console.log(`  - ${admin.email} (${admin.role})`);
+  }
 }
 
 const userId = randomUUID();

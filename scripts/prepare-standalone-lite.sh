@@ -18,6 +18,12 @@ cp -a "$STANDALONE/." "$DEPLOY/"
 rm -rf "$DEPLOY/node_modules"
 
 cp -a "$ROOT/.next/static" "$DEPLOY/.next/static"
+if [[ -f "$ROOT/.next/BUILD_ID" ]]; then
+  cp "$ROOT/.next/BUILD_ID" "$DEPLOY/build-id.txt"
+  mkdir -p "$DEPLOY/.next"
+  cp "$ROOT/.next/BUILD_ID" "$DEPLOY/.next/BUILD_ID"
+fi
+find "$DEPLOY/.next/static" -type f > "$DEPLOY/static-file-manifest.txt"
 cp -a "$ROOT/public" "$DEPLOY/public"
 cp -a "$ROOT/drizzle" "$DEPLOY/drizzle"
 cp "$ROOT/web.config" "$DEPLOY/web.config"
