@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, afterAll, beforeEach, describe, expect, it } from "vitest";
 import * as messagesRepo from "@/server/repositories/messages";
 import { createQuestion } from "@/server/repositories/questions";
 import { getInstallationById } from "@/server/repositories/installations";
@@ -30,57 +30,59 @@ describe.skipIf(!isTestDatabaseConfigured())("sync", () => {
   });
 
   it("paginates admin replies using the sequence cursor", async () => {
-    const getMessagesSpy = vi
-      .spyOn(messagesRepo, "getMessagesAfterSequence")
-      .mockImplementation((installationId, afterSequence) =>
-        messagesRepo.getMessagesAfterSequence(installationId, afterSequence, 2),
-      );
+    const { userId } = await loginAsAdmin();
+    const { app, clientKey } = await createTestApp(userId);
+    const installation = await registerTestInstallation(app.id, clientKey);
+    const installationRecord = await getInstallationById(installation.installationId);
+    expect(installationRecord).toBeDefined();
 
-    try {
-      const { userId } = await loginAsAdmin();
-      const { app, clientKey } = await createTestApp(userId);
-      const installation = await registerTestInstallation(app.id, clientKey);
-      const installationRecord = await getInstallationById(installation.installationId);
-      expect(installationRecord).toBeDefined();
+    const question = await createQuestion({
+      appId: app.id,
+      title: "Sync question",
+      answerType: "short_text",
+      status: "active",
+      required: false,
+      allowMultipleAnswers: false,
+      createdBy: userId,
+    });
 
-      const question = await createQuestion({
-        appId: app.id,
-        title: "Sync question",
-        answerType: "short_text",
-        status: "active",
-        required: false,
-        allowMultipleAnswers: false,
-        createdBy: userId,
-      });
+    const { conversationId } = await submitAnswer(installationRecord!, {
+      source: "remote",
+      questionId: question.id,
+      answer: "hello",
+      clientRequestId: randomUUID(),
+    });
 
-      const { conversationId } = await submitAnswer(installationRecord!, {
-        source: "remote",
-        questionId: question.id,
-        answer: "hello",
-        clientRequestId: randomUUID(),
-      });
+    await replyToConversation(conversationId, { body: "Reply 1" }, userId, "superadmin");
+    await replyToConversation(conversationId, { body: "Reply 2" }, userId, "superadmin");
+    await replyToConversation(conversationId, { body: "Reply 3" }, userId, "superadmin");
 
-      await replyToConversation(conversationId, { body: "Reply 1" }, userId, "superadmin");
-      await replyToConversation(conversationId, { body: "Reply 2" }, userId, "superadmin");
-      await replyToConversation(conversationId, { body: "Reply 3" }, userId, "superadmin");
+    const firstPage = await messagesRepo.getMessagesAfterSequence(
+      installationRecord!.id,
+      0,
+      2,
+    );
+    expect(firstPage).toHaveLength(2);
 
-      const firstPage = await getSyncData(installationRecord!, 0);
-      expect(firstPage.replies).toHaveLength(2);
-      expect(firstPage.hasMore).toBe(true);
-      expect(Number(firstPage.nextCursor)).toBeGreaterThan(0);
+    const secondPage = await messagesRepo.getMessagesAfterSequence(
+      installationRecord!.id,
+      firstPage.at(-1)!.sequence,
+      10,
+    );
+    const syncedBodies = [...firstPage, ...secondPage].map((reply) => reply.body);
+    expect(syncedBodies).toContain("Reply 1");
+    expect(syncedBodies).toContain("Reply 2");
+    expect(syncedBodies).toContain("Reply 3");
 
-      const secondPage = await getSyncData(
-        installationRecord!,
-        Number(firstPage.nextCursor),
-      );
-      expect(secondPage.replies.length).toBeGreaterThanOrEqual(1);
-      expect(secondPage.replies.some((reply) => reply.body === "Reply 3")).toBe(true);
-    } finally {
-      getMessagesSpy.mockRestore();
-    }
+    const syncPayload = await getSyncData(installationRecord!, 0);
+    const adminReplyBodies = syncPayload.replies
+      .filter((reply) => reply.senderType === "admin")
+      .map((reply) => reply.body);
+    expect(adminReplyBodies).toEqual(["Reply 1", "Reply 2", "Reply 3"]);
+    expect(syncPayload.hasMore).toBeUndefined();
   });
 
-  it("includes admin replies in sync output", async () => {
+  it("returns admin replies and drops answered questions from sync", async () => {
     const { userId } = await loginAsAdmin();
     const { app, clientKey } = await createTestApp(userId);
     const installation = await registerTestInstallation(app.id, clientKey);
@@ -97,6 +99,9 @@ describe.skipIf(!isTestDatabaseConfigured())("sync", () => {
       createdBy: userId,
     });
 
+    const syncBeforeAnswer = await getSyncData(installationRecord!, 0);
+    expect(syncBeforeAnswer.questions.some((item) => item.id === question.id)).toBe(true);
+
     const { conversationId } = await submitAnswer(installationRecord!, {
       source: "remote",
       questionId: question.id,
@@ -106,8 +111,10 @@ describe.skipIf(!isTestDatabaseConfigured())("sync", () => {
 
     await replyToConversation(conversationId, { body: "Thanks, we can help." }, userId, "superadmin");
 
-    const sync = await getSyncData(installationRecord!, 0);
-    expect(sync.questions.some((item) => item.id === question.id)).toBe(true);
-    expect(sync.replies.some((reply) => reply.body === "Thanks, we can help.")).toBe(true);
+    const syncAfterAnswer = await getSyncData(installationRecord!, 0);
+    expect(syncAfterAnswer.questions.some((item) => item.id === question.id)).toBe(false);
+    expect(syncAfterAnswer.replies.some((reply) => reply.body === "Thanks, we can help.")).toBe(
+      true,
+    );
   });
 });

@@ -63,7 +63,7 @@ export default function ChangePasswordPage() {
     }
 
     setLoading(false);
-    window.location.assign("/");
+    window.location.assign("/dashboard");
   }
 
   if (checkingSession) {
@@ -126,7 +126,7 @@ export default function ChangePasswordPage() {
           </Button>
           {!isRequired ? (
             <Button variant="ghost" asChild>
-              <Link href="/">Cancel</Link>
+              <Link href="/dashboard">Cancel</Link>
             </Button>
           ) : null}
         </div>

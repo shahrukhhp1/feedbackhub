@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" role="img" aria-labelledby="title desc">
+  <title id="title">How client integration works with Feedback Hub</title>
+  <desc id="desc">Four steps: register installation, sync questions, submit answers, receive admin replies</desc>
+  <rect width="720" height="400" rx="20" fill="#f8fafc"/>
+  <g font-family="system-ui,sans-serif">
+    <g transform="translate(40,48)">
+      <circle cx="32" cy="32" r="32" fill="#2563eb"/>
+      <text x="32" y="38" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+      <text x="80" y="28" font-size="15" font-weight="600" fill="#0f172a">Register</text>
+      <text x="80" y="48" font-size="12" fill="#64748b">POST /api/v1/installations/register</text>
+      <text x="80" y="66" font-size="12" fill="#64748b">Store installation token securely</text>
+    </g>
+    <g transform="translate(40,128)">
+      <circle cx="32" cy="32" r="32" fill="#2563eb"/>
+      <text x="32" y="38" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+      <text x="80" y="28" font-size="15" font-weight="600" fill="#0f172a">Sync questions</text>
+      <text x="80" y="48" font-size="12" fill="#64748b">GET /api/v1/sync - show surveys in-app</text>
+      <text x="80" y="66" font-size="12" fill="#64748b">Ratings, choices, yes/no, and more</text>
+    </g>
+    <g transform="translate(40,208)">
+      <circle cx="32" cy="32" r="32" fill="#2563eb"/>
+      <text x="32" y="38" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+      <text x="80" y="28" font-size="15" font-weight="600" fill="#0f172a">Submit answers</text>
+      <text x="80" y="48" font-size="12" fill="#64748b">POST /api/v1/answers with validation</text>
+      <text x="80" y="66" font-size="12" fill="#64748b">Opens a conversation for follow-up</text>
+    </g>
+    <g transform="translate(40,288)">
+      <circle cx="32" cy="32" r="32" fill="#2563eb"/>
+      <text x="32" y="38" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">4</text>
+      <text x="80" y="28" font-size="15" font-weight="600" fill="#0f172a">Two-way feedback</text>
+      <text x="80" y="48" font-size="12" fill="#64748b">Admin replies sync back to the client</text>
+      <text x="80" y="66" font-size="12" fill="#64748b">General feedback conversations too</text>
+    </g>
+  </g>
+  <rect x="400" y="48" width="280" height="304" rx="16" fill="#fff" stroke="#e2e8f0"/>
+  <text x="424" y="80" font-size="13" font-weight="600" fill="#334155">Active question</text>
+  <rect x="424" y="96" width="232" height="56" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="440" y="120" font-size="12" fill="#1e40af">How satisfied are you today?</text>
+  <text x="440" y="138" font-size="11" fill="#64748b">Rating (optional)</text>
+  <text x="424" y="188" font-size="13" font-weight="600" fill="#334155">User answer</text>
+  <rect x="424" y="204" width="120" height="36" rx="8" fill="#2563eb"/>
+  <text x="484" y="227" font-size="14" font-weight="600" fill="#fff" text-anchor="middle">4 / 5</text>
+  <text x="424" y="276" font-size="13" font-weight="600" fill="#334155">Admin reply</text>
+  <rect x="424" y="292" width="232" height="44" rx="10" fill="#f0fdf4" stroke="#bbf7d0"/>
+  <text x="440" y="318" font-size="12" fill="#166534">Thanks - we are looking into this.</text>
+</svg>

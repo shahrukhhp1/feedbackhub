@@ -27,7 +27,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/inbox", label: "Inbox", icon: Inbox },
   { href: "/questions", label: "Questions", icon: MessageSquare },
   { href: "/integration", label: "Integration", icon: Plug },
@@ -52,8 +52,8 @@ function NavLinks({
       {navItems.map((item) => {
         if (item.superadminOnly && role !== "superadmin") return null;
         const isActive =
-          item.href === "/"
-            ? pathname === "/"
+          item.href === "/dashboard"
+            ? pathname === "/dashboard"
             : pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
 
@@ -105,7 +105,7 @@ export function Sidebar({
         )}
       >
         <div className="flex h-14 items-center justify-between border-b border-gray-200 px-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold text-gray-900">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-gray-900">
             <FileText className="h-5 w-5 text-blue-600" />
             Feedback Hub
           </Link>

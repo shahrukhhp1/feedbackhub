@@ -16,7 +16,7 @@ import {
 import type { User as AuthUser } from "@/lib/auth-client";
 
 const pageTitles: Record<string, string> = {
-  "/": "Overview",
+  "/dashboard": "Overview",
   "/inbox": "Inbox",
   "/questions": "Questions",
   "/integration": "Integration",

@@ -29,7 +29,7 @@ export default function LoginPage() {
 
       const me = await adminApi.getMe();
       window.location.assign(
-        me.user.mustChangePassword ? "/change-password" : "/",
+        me.user.mustChangePassword ? "/change-password" : "/dashboard",
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign in failed");

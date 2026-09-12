@@ -26,6 +26,8 @@ test.describe("Feedback Hub smoke tests", () => {
   test("home page loads", async ({ page }) => {
     const response = await page.goto("/");
     expect(response?.status()).toBeLessThan(500);
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      "Ship feedback forms",
+    );
   });
 });

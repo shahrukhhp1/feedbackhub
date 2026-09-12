@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" role="img" aria-labelledby="title desc">
+  <title id="title">Feedback Hub admin inbox and analytics</title>
+  <desc id="desc">Dashboard with inbox, questions, answers export, and team access per app</desc>
+  <rect width="720" height="400" rx="20" fill="#0f172a"/>
+  <rect x="24" y="24" width="672" height="352" rx="12" fill="#fff"/>
+  <rect x="24" y="24" width="160" height="352" rx="12" fill="#f8fafc"/>
+  <text x="48" y="56" font-family="system-ui,sans-serif" font-size="13" font-weight="700" fill="#0f172a">Feedback Hub</text>
+  <rect x="40" y="72" width="128" height="28" rx="6" fill="#dbeafe"/>
+  <rect x="40" y="108" width="128" height="28" rx="6" fill="#f1f5f9"/>
+  <rect x="40" y="144" width="128" height="28" rx="6" fill="#f1f5f9"/>
+  <rect x="40" y="180" width="128" height="28" rx="6" fill="#f1f5f9"/>
+  <text x="104" y="90" font-family="system-ui,sans-serif" font-size="11" fill="#1d4ed8" text-anchor="middle">Inbox</text>
+  <text x="104" y="126" font-family="system-ui,sans-serif" font-size="11" fill="#64748b" text-anchor="middle">Questions</text>
+  <text x="104" y="162" font-family="system-ui,sans-serif" font-size="11" fill="#64748b" text-anchor="middle">Answers</text>
+  <text x="104" y="198" font-family="system-ui,sans-serif" font-size="11" fill="#64748b" text-anchor="middle">Apps</text>
+  <rect x="200" y="48" width="480" height="48" rx="8" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="220" y="78" font-family="system-ui,sans-serif" font-size="14" font-weight="600" fill="#0f172a">Inbox - checkout feedback</text>
+  <rect x="200" y="112" width="320" height="72" rx="10" fill="#eff6ff"/>
+  <text x="220" y="140" font-family="system-ui,sans-serif" font-size="12" fill="#1e293b">User: Payment failed on iOS</text>
+  <text x="220" y="160" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">2 min ago - App: Storefront</text>
+  <rect x="536" y="112" width="144" height="72" rx="10" fill="#f0fdf4"/>
+  <text x="608" y="148" font-family="system-ui,sans-serif" font-size="11" fill="#166534" text-anchor="middle">Reply sent</text>
+  <rect x="200" y="200" width="480" height="140" rx="10" fill="#fafafa" stroke="#e5e7eb"/>
+  <text x="220" y="228" font-family="system-ui,sans-serif" font-size="12" font-weight="600" fill="#334155">Team access</text>
+  <text x="220" y="252" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">Assign admins &amp; viewers per app</text>
+  <rect x="220" y="268" width="100" height="24" rx="6" fill="#e0e7ff"/>
+  <rect x="332" y="268" width="100" height="24" rx="6" fill="#e0e7ff"/>
+  <text x="270" y="284" font-family="system-ui,sans-serif" font-size="10" fill="#3730a3" text-anchor="middle">dev@co.com</text>
+  <text x="382" y="284" font-family="system-ui,sans-serif" font-size="10" fill="#3730a3" text-anchor="middle">pm@co.com</text>
+</svg>

@@ -2,13 +2,14 @@ import "server-only";
 
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { admin } from "better-auth/plugins";
 import { defaultRoles, adminAc, userAc } from "better-auth/plugins/admin/access";
 import { getDb } from "@/server/db";
 import * as schema from "@/server/db/schema";
 import { getEnv } from "@/server/env";
+import { getUserByEmail } from "@/server/repositories/users";
 import { normalizeEmail } from "@/server/security/crypto";
 import { buildAuthTrustedOrigins } from "./trusted-origins";
 
@@ -108,6 +109,14 @@ export const auth = betterAuth({
             handler: createAuthMiddleware(async (ctx) => {
               if (typeof ctx.body?.email === "string") {
                 ctx.body.email = normalizeEmail(ctx.body.email);
+              }
+              if (ctx.path === "/sign-in/email" && typeof ctx.body?.email === "string") {
+                const user = await getUserByEmail(ctx.body.email);
+                if (user?.disabledAt) {
+                  throw new APIError("FORBIDDEN", {
+                    message: "Account is disabled",
+                  });
+                }
               }
             }),
           },
