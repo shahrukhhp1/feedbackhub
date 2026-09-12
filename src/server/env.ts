@@ -17,6 +17,7 @@ const envSchema = z.object({
     .optional()
     .transform((v) => v === "true"),
   CORS_ALLOWED_ORIGINS: z.string().optional(),
+  AUTH_TRUSTED_ORIGINS: z.string().optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().optional(),
   SMTP_USER: z.string().optional(),

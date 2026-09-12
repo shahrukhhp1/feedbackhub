@@ -10,8 +10,10 @@ import { getDb } from "@/server/db";
 import * as schema from "@/server/db/schema";
 import { getEnv } from "@/server/env";
 import { normalizeEmail } from "@/server/security/crypto";
+import { buildAuthTrustedOrigins } from "./trusted-origins";
 
 const env = getEnv();
+const trustedOrigins = buildAuthTrustedOrigins(env.APP_BASE_URL, env.AUTH_TRUSTED_ORIGINS);
 
 export const auth = betterAuth({
   database: drizzleAdapter(getDb(), {
@@ -20,7 +22,7 @@ export const auth = betterAuth({
   }),
   secret: env.AUTH_SECRET,
   baseURL: env.APP_BASE_URL,
-  trustedOrigins: [env.APP_BASE_URL],
+  trustedOrigins,
   emailAndPassword: {
     enabled: true,
     disableSignUp: true,
